@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+:root {
+  /* 역할 컬러 8종 (기획서 3.3) */
+  --role-yellow:    #FFD966;
+  --role-red:       #FF5C5C;
+  --role-green:     #93D3A2;
+  --role-blue:      #8FB8F0;
+  --role-orange:    #FFAD66;
+  --role-lightblue: #A8D8F5;
+  --role-purple:    #BBA0E8;
+  --role-pink:      #FF9BB3;
+
+  /* 소프트 무드 (기획서 17.2) */
+  --color-primary:        #FFC6D4;
+  --color-primary-strong: #FF9BB3;
+  --color-primary-tint:   #FFDDE6;
+  --color-lavender:       #E7D6FF;
+  --color-sky:            #CFE8FF;
+  --color-bg:             #FFF9FA;
+  --color-surface:        #FFFFFF;
+  --color-surface-sub:    #FFF3F6;
+  --color-neutral:        #F7F7F7;
+  --color-text:           #2B2226;
+  --color-text-sub:       #8E8E93;
+
+  --radius-card:   16px;
+  --radius-bubble: 18px;
+  --radius-full:   999px;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: system-ui, -apple-system, sans-serif;
+}

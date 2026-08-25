@@ -1,0 +1,27 @@
+{
+  "entry": {
+    "title": "오늘 누구 할래?",
+    "nameLabel": "이름",
+    "namePlaceholder": "미유",
+    "roleToggle": "다른 역할 할래요",
+    "rolePlaceholder": "교관",
+    "submit": "시작하기",
+    "realPersonWarning": "실존 인물의 이름이나 애칭은 쓸 수 없어요"
+  },
+  "room": {
+    "placeholder": "메시지 입력",
+    "send": "보내기",
+    "empty": "아직 아무도 말하지 않았어요",
+    "back": "나가기"
+  },
+  "colors": {
+    "yellow": "노랑",
+    "red": "빨강",
+    "green": "초록",
+    "blue": "파랑",
+    "orange": "주황",
+    "lightblue": "하늘",
+    "purple": "보라",
+    "pink": "핑크"
+  }
+}
