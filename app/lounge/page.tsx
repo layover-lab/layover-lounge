@@ -18,12 +18,25 @@ export default function LoungeEntry() {
 
   useEffect(() => {
     const saved = localStorage.getItem(ME_KEY)
-    if (!saved) return
-    const me = JSON.parse(saved)
-    setColorKey(me.colorKey ?? 'yellow')
-    setName(me.name ?? '')
-    setRole(me.role ?? '')
-    if (me.role) setOpenRole(true)
+    if (saved) {
+      const me = JSON.parse(saved)
+      setColorKey(me.colorKey ?? 'yellow')
+      setName(me.name ?? '')
+      setRole(me.role ?? '')
+      if (me.role) setOpenRole(true)
+    }
+
+    /* 테스트에서 넘어오는 다리 (기획서 4.16) — 넘어오는 건 색 하나뿐입니다.
+       ⚠️ 이름은 넘어오지 않습니다. 도착 화면에 「○○ 타입이시군요!」가 뜨면
+          3.5 의 경계가 무너집니다. 색만 미리 골라둡니다. */
+    const c = /[?&]c=([a-z]+)/.exec(window.location.search)?.[1]
+    if (c && (COLOR_KEYS as readonly string[]).includes(c)) setColorKey(c as ColorKey)
+
+    /* 어느 테스트가 사람을 보냈나. events 테이블은 10월이라 지금은 들고만 있습니다 */
+    const from = /[?&]from=([a-z0-9-]+)/.exec(window.location.search)?.[1]
+    if (from) {
+      try { localStorage.setItem('layover.from', from) } catch {}
+    }
   }, [])
 
   function start() {

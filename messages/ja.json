@@ -1,0 +1,46 @@
+{
+  "entry": {
+    "title": "きょうは だれになる?",
+    "nameLabel": "なまえ",
+    "namePlaceholder": "みゆ",
+    "roleToggle": "ちがう役をやりたい",
+    "rolePlaceholder": "教官",
+    "submit": "はじめる",
+    "realPersonWarning": "実在の人物の名前やあだ名は使えません"
+  },
+  "room": {
+    "placeholder": "メッセージを入力",
+    "send": "送信",
+    "empty": "まだだれも話していません",
+    "back": "もどる"
+  },
+  "colors": {
+    "yellow": "イエロー",
+    "red": "レッド",
+    "green": "グリーン",
+    "blue": "ブルー",
+    "orange": "オレンジ",
+    "lightblue": "スカイ",
+    "purple": "パープル",
+    "pink": "ピンク"
+  },
+  "cheer": {
+    "title": "応援ウォール",
+    "lead": "色にひとこと のこしてください",
+    "all": "ぜんぶ",
+    "toWhom": "どの色にのこしますか?",
+    "placeholder": "ひとこと",
+    "send": "のこす",
+    "empty": "まだ何もありません。最初のひとことをどうぞ",
+    "refresh": "更新",
+    "nameLabel": "なまえ",
+    "namePlaceholder": "みゆ",
+    "noticeDelete": "書いたら消せません。やさしい言葉でお願いします 🌷",
+    "noticeRealPerson": "実在の人物の名前は使えません",
+    "notifyTitle": "9月末、遊べる場所がオープンします",
+    "notifyBody": "オープンしたらインスタでお知らせします。フォローしていただけると制作の励みになります 🌷",
+    "notifyButton": "インスタをフォローする",
+    "sending": "のこしています…",
+    "cooldown": "少しあとで もういちど のこせます"
+  }
+}

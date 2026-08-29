@@ -1,0 +1,273 @@
+'use client'
+
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { supabase } from '@/lib/supabase'
+import { COLOR_KEYS, type ColorKey } from '@/lib/colors'
+import { getClientId } from '@/lib/client-id'
+import { pickLang, dict, type Lang } from '@/lib/i18n'
+
+/* ─────────────────────────────────────────────────────────
+   응원 벽 (기획서 5.10)
+
+   멤놀방과 다른 물건입니다 — 정원이 없고, 한 줄 남기고 나가는 곳이라
+   실시간을 쓰지 않습니다. 동시 접속 여유를 멤놀방에 남겨둡니다.
+
+   ⚠️ 색깔에만 남깁니다. 실존 인물 이름은 3.5 위반입니다.
+   ───────────────────────────────────────────────────────── */
+
+const ME_KEY = 'layover.me'
+const INSTAGRAM = 'https://www.instagram.com/eugene_k_seoul/'
+const MAX_LEN = 200
+const COOLDOWN_MS = 10_000
+
+type Row = {
+  id: string
+  body: string
+  created_at: string
+  room_id: string
+  participants: { name: string; color_key: string } | null
+}
+type Me = { clientId: string; colorKey: string; name: string; role: string; avatar: string }
+
+const SELECT = 'id, body, created_at, room_id, participants(name, color_key)'
+
+export default function CheerWall() {
+  const [lang, setLang] = useState<Lang>('ja')
+  const t = dict(lang).cheer
+  const colorNames = dict(lang).colors as Record<string, string>
+
+  const [rooms, setRooms] = useState<Record<ColorKey, string>>({} as Record<ColorKey, string>)
+  const [rows, setRows] = useState<Row[]>([])
+  const [filter, setFilter] = useState<ColorKey | null>(null)
+  const [target, setTarget] = useState<ColorKey>('pink')
+  const [name, setName] = useState('')
+  const [myColor, setMyColor] = useState<ColorKey>('pink')
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState('')
+  const lastSent = useRef(0)
+
+  /* 방 목록 → 색 ↔ room_id 표 */
+  const loadRooms = useCallback(async () => {
+    const { data } = await supabase.from('rooms').select('id, slug').eq('world', 'cheer')
+    const map = {} as Record<ColorKey, string>
+    for (const r of data ?? []) map[r.slug.replace('cheer-', '') as ColorKey] = r.id
+    setRooms(map)
+    return map
+  }, [])
+
+  const loadRows = useCallback(async (map: Record<ColorKey, string>) => {
+    const ids = Object.values(map)
+    if (!ids.length) return
+    const { data } = await supabase
+      .from('messages').select(SELECT)
+      .in('room_id', ids)
+      .order('created_at', { ascending: false })
+      .limit(50)
+    setRows((data as unknown as Row[]) ?? [])
+  }, [])
+
+  useEffect(() => {
+    setLang(pickLang())
+
+    /* cutie-type 에서 ?c=pink 로 넘어옵니다. 색 하나만 넘어옵니다 — 이름은 넘어오지 않습니다 */
+    const c = /[?&]c=([a-z]+)/.exec(window.location.search)?.[1]
+    if (c && (COLOR_KEYS as readonly string[]).includes(c)) {
+      setTarget(c as ColorKey)
+      setFilter(c as ColorKey)
+    }
+
+    try {
+      const saved = localStorage.getItem(ME_KEY)
+      if (saved) {
+        const me: Me = JSON.parse(saved)
+        setName(me.name ?? '')
+        if ((COLOR_KEYS as readonly string[]).includes(me.colorKey)) setMyColor(me.colorKey as ColorKey)
+      }
+    } catch {}
+
+    loadRooms().then(loadRows)
+  }, [loadRooms, loadRows])
+
+  const colorOf = (roomId: string) =>
+    (Object.keys(rooms) as ColorKey[]).find((k) => rooms[k] === roomId) ?? 'pink'
+
+  const shown = filter ? rows.filter((r) => rooms[filter] === r.room_id) : rows
+
+  async function send() {
+    const body = text.trim()
+    if (!body || busy) return
+    if (!name.trim()) return
+    if (Date.now() - lastSent.current < COOLDOWN_MS) { setNote(t.cooldown); return }
+
+    const roomId = rooms[target]
+    if (!roomId) return
+
+    setBusy(true)
+    setNote('')
+    const clientId = getClientId()
+
+    /* 이름·색을 기억해둡니다 — 라운지 입장 화면과 같은 칸을 씁니다 */
+    try {
+      localStorage.setItem(ME_KEY, JSON.stringify({
+        clientId, colorKey: myColor, name: name.trim(), role: '', avatar: 'preset-01',
+      }))
+    } catch {}
+
+    const { data: existing } = await supabase
+      .from('participants').select('id')
+      .eq('room_id', roomId).eq('client_id', clientId).maybeSingle()
+
+    let pid = existing?.id
+    if (!pid) {
+      const { data: created, error } = await supabase.from('participants').insert({
+        room_id: roomId, client_id: clientId, name: name.trim(),
+        color_key: myColor, avatar: 'preset-01',
+      }).select('id').single()
+      if (error) { console.error('참가자 생성 실패:', error); setBusy(false); return }
+      pid = created?.id
+    }
+
+    const { error } = await supabase.from('messages').insert({
+      room_id: roomId, layer: 'stage', participant_id: pid,
+      body, client_msg_id: crypto.randomUUID(),
+    })
+    if (error) console.error('응원 저장 실패:', error)
+
+    lastSent.current = Date.now()
+    setText('')
+    setBusy(false)
+    await loadRows(rooms)
+  }
+
+  return (
+    <main style={wrap}>
+      <header style={{ marginBottom: 18 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{t.title}</h1>
+        <p style={{ fontSize: 13, color: 'var(--color-text-sub)', margin: '4px 0 0' }}>{t.lead}</p>
+      </header>
+
+      {/* 색 필터 — 전체가 기본입니다. 8개로 나누면 초기에 방마다 두세 개라 썰렁합니다 */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+        <button onClick={() => setFilter(null)} style={chip(filter === null)}>{t.all}</button>
+        {COLOR_KEYS.map((k) => (
+          <button key={k} onClick={() => setFilter(k)} style={chip(filter === k, k)} aria-label={colorNames[k]}>
+            <i style={dot(k)} />
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+        <button onClick={() => loadRows(rooms)} style={linkBtn}>{t.refresh}</button>
+      </div>
+
+      <section style={{ marginBottom: 26 }}>
+        {shown.length === 0 && <p style={emptyStyle}>{t.empty}</p>}
+        {shown.map((r) => (
+          <article key={r.id} style={{ ...item, borderLeftColor: `var(--role-${colorOf(r.room_id)})` }}>
+            <div style={{ fontSize: 12, color: 'var(--color-text-sub)', marginBottom: 3 }}>
+              <i style={dot(r.participants?.color_key as ColorKey)} />
+              <strong style={{ color: 'var(--color-text)', marginLeft: 6 }}>{r.participants?.name}</strong>
+              <span style={{ margin: '0 5px' }}>→</span>
+              {colorNames[colorOf(r.room_id)]}
+            </div>
+            <div style={{ fontSize: 15, whiteSpace: 'pre-wrap' }}>{r.body}</div>
+          </article>
+        ))}
+      </section>
+
+      <section style={box}>
+        <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 600 }}>{t.noticeDelete}</p>
+        <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--color-text-sub)' }}>{t.noticeRealPerson}</p>
+
+        <label style={label}>{t.toWhom}</label>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+          {COLOR_KEYS.map((k) => (
+            <button key={k} onClick={() => setTarget(k)} style={swatch(target === k, k)} aria-label={colorNames[k]} />
+          ))}
+        </div>
+
+        <label style={label}>{t.nameLabel}</label>
+        <input value={name} onChange={(e) => setName(e.target.value)}
+               placeholder={t.namePlaceholder} maxLength={12} style={input} />
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) send() }}
+            placeholder={t.placeholder}
+            maxLength={MAX_LEN}
+            style={{ ...input, flex: 1, marginBottom: 0 }}
+          />
+          <button onClick={send} disabled={busy || !text.trim() || !name.trim()} style={sendBtn}>
+            {busy ? t.sending : t.send}
+          </button>
+        </div>
+        {note && <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--color-primary-strong)' }}>{note}</p>}
+      </section>
+
+      {/* 응원을 남긴 직후가 가장 우호적인 순간입니다 (기획서 4.11 — 등록 수가 가장 중요) */}
+      <section style={{ ...box, textAlign: 'center', marginTop: 14 }}>
+        <b style={{ fontSize: 15 }}>{t.notifyTitle}</b>
+        <p style={{ fontSize: 13, color: 'var(--color-text-sub)', margin: '6px 0 14px' }}>{t.notifyBody}</p>
+        <a href={INSTAGRAM} target="_blank" rel="noopener noreferrer" style={ctaBtn}>{t.notifyButton}</a>
+      </section>
+    </main>
+  )
+}
+
+/* ── 색은 선·점·테두리에만. 넓은 면을 칠하지 않습니다 (기획서 17장) ── */
+const wrap: CSSProperties = { maxWidth: 480, margin: '0 auto', padding: '28px 18px 60px' }
+const box: CSSProperties = {
+  background: 'var(--color-surface)', border: '1px solid #F2E4E8',
+  borderRadius: 'var(--radius-card)', padding: 18,
+}
+const item: CSSProperties = {
+  borderLeft: '3px solid', paddingLeft: 12, marginBottom: 16,
+}
+const emptyStyle: CSSProperties = {
+  fontSize: 13, color: 'var(--color-text-sub)', textAlign: 'center', padding: '28px 0',
+}
+const label: CSSProperties = {
+  display: 'block', fontSize: 12, color: 'var(--color-text-sub)', marginBottom: 6,
+}
+const input: CSSProperties = {
+  width: '100%', padding: 12, marginBottom: 4, fontSize: 15,
+  borderRadius: 'var(--radius-full)', border: '1px solid #F2E4E8', background: 'var(--color-bg)',
+}
+const sendBtn: CSSProperties = {
+  padding: '0 18px', borderRadius: 'var(--radius-full)', border: 'none',
+  background: 'var(--color-primary)', fontWeight: 600, cursor: 'pointer',
+}
+const ctaBtn: CSSProperties = {
+  display: 'block', padding: '14px 18px', borderRadius: 'var(--radius-full)',
+  background: 'var(--color-primary)', color: 'var(--color-text)',
+  fontWeight: 700, textDecoration: 'none',
+}
+const linkBtn: CSSProperties = {
+  background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+  fontSize: 12, color: 'var(--color-text-sub)', textDecoration: 'underline',
+}
+function chip(on: boolean, k?: ColorKey): CSSProperties {
+  return {
+    padding: k ? '7px 9px' : '7px 12px', borderRadius: 'var(--radius-full)',
+    border: on ? '1px solid var(--color-text)' : '1px solid #F2E4E8',
+    background: 'var(--color-surface)', cursor: 'pointer', fontSize: 13,
+    display: 'flex', alignItems: 'center',
+  }
+}
+function dot(k?: ColorKey): CSSProperties {
+  return {
+    display: 'inline-block', width: 9, height: 9, borderRadius: 999,
+    background: `var(--role-${k ?? 'pink'})`,
+  }
+}
+function swatch(on: boolean, k: ColorKey): CSSProperties {
+  return {
+    width: 34, height: 34, borderRadius: 'var(--radius-full)',
+    background: `var(--role-${k})`,
+    border: on ? '3px solid var(--color-text)' : '3px solid transparent',
+    cursor: 'pointer',
+  }
+}
