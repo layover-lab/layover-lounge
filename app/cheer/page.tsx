@@ -268,7 +268,9 @@ export default function CheerWall() {
       {/* 응원을 남긴 직후가 가장 우호적인 순간입니다 (기획서 4.11 — 등록 수가 가장 중요) */}
       <section style={{ ...box, textAlign: 'center', marginTop: 14 }}>
         <b style={{ fontSize: 15 }}>{t.notifyTitle}</b>
-        <p style={{ fontSize: 13, color: 'var(--color-text-sub)', margin: '6px 0 14px' }}>{t.notifyBody}</p>
+        {/* 멤놀방이 뭔지 모르는 사람이 있어서 한 줄 설명을 답니다 */}
+        <p style={{ fontSize: 13, color: 'var(--color-text-sub)', margin: '6px 0 0' }}>{t.notifyLead}</p>
+        <p style={{ fontSize: 13, color: 'var(--color-text-sub)', margin: '4px 0 14px' }}>{t.notifyBody}</p>
         <a href={INSTAGRAM} target="_blank" rel="noopener noreferrer" style={ctaBtn}>{t.notifyButton}</a>
         {/* 유튜브는 보조입니다 — 주 버튼이 둘이면 아무것도 안 눌립니다 */}
         <a href={YOUTUBE} target="_blank" rel="noopener noreferrer" style={ctaGhost}>{t.notifyYoutube}</a>
