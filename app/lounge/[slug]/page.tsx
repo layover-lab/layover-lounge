@@ -3,10 +3,9 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import ko from '@/messages/ko.json'
+import { pickLang, dict, type Lang } from '@/lib/i18n'
 
 const ME_KEY = 'layover.me'
-const t = ko.room
 
 type Me = { clientId: string; colorKey: string; name: string; role: string; avatar: string }
 type Msg = {
@@ -28,10 +27,16 @@ export default function Stage() {
   const [messages, setMessages] = useState<Msg[]>([])
   const [text, setText] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const [lang, setLang] = useState<Lang>('ja')
+  const t = dict(lang).room
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null
     let cancelled = false
+
+    const picked = pickLang()
+    setLang(picked)
+    document.documentElement.lang = picked
 
     async function join() {
       const saved = localStorage.getItem(ME_KEY)

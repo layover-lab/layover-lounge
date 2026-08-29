@@ -68,7 +68,11 @@ export default function CheerWall() {
   }, [])
 
   useEffect(() => {
-    setLang(pickLang())
+    const picked = pickLang()
+    setLang(picked)
+    /* <html lang> 을 실제 언어로 맞춥니다.
+       안 맞으면 크롬이 "다른 언어 페이지"로 보고 번역을 걸어서 글자가 뭉갭니다. */
+    document.documentElement.lang = picked
 
     /* cutie-type 에서 ?c=pink 로 넘어옵니다. 색 하나만 넘어옵니다 — 이름은 넘어오지 않습니다.
        기획서 4.16 에서 c 는 「내 색」입니다. 대상 색은 여기 벽에서 고릅니다.
@@ -137,7 +141,14 @@ export default function CheerWall() {
       room_id: roomId, layer: 'stage', participant_id: pid,
       body, client_msg_id: crypto.randomUUID(),
     })
-    if (error) console.error('응원 저장 실패:', error)
+
+    /* 서버 쪽 도배 방지에 걸리면 입력을 지우지 않습니다 — 쓴 걸 잃으면 안 됩니다 */
+    if (error) {
+      console.error('응원 저장 실패:', error)
+      setNote(error.message?.includes('too_many') ? t.tooMany : t.cooldown)
+      setBusy(false)
+      return
+    }
 
     lastSent.current = Date.now()
     setText('')

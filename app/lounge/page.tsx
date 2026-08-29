@@ -4,10 +4,9 @@ import { useEffect, useState, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { COLOR_KEYS, type ColorKey } from '@/lib/colors'
 import { getClientId } from '@/lib/client-id'
-import ko from '@/messages/ko.json'
+import { pickLang, dict, type Lang } from '@/lib/i18n'
 
 const ME_KEY = 'layover.me'
-const t = ko.entry
 
 export default function LoungeEntry() {
   const router = useRouter()
@@ -15,8 +14,15 @@ export default function LoungeEntry() {
   const [name, setName] = useState('')
   const [role, setRole] = useState('')
   const [openRole, setOpenRole] = useState(false)
+  const [lang, setLang] = useState<Lang>('ja')
+  const t = dict(lang).entry
+  const colorNames = dict(lang).colors as Record<string, string>
 
   useEffect(() => {
+    const picked = pickLang()
+    setLang(picked)
+    document.documentElement.lang = picked   /* 안 맞추면 크롬이 번역을 걸어 글자가 뭉갭니다 */
+
     const saved = localStorage.getItem(ME_KEY)
     if (saved) {
       const me = JSON.parse(saved)
@@ -63,7 +69,7 @@ export default function LoungeEntry() {
           <button
             key={key}
             onClick={() => setColorKey(key)}
-            aria-label={ko.colors[key]}
+            aria-label={colorNames[key]}
             style={{
               width: 44,
               height: 44,
