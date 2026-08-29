@@ -223,7 +223,7 @@ export default function CheerWall() {
 }
 
 /* ── 색은 선·점·테두리에만. 넓은 면을 칠하지 않습니다 (기획서 17장) ── */
-const wrap: CSSProperties = { maxWidth: 480, margin: '0 auto', padding: '28px 18px 60px' }
+const wrap: CSSProperties = { width: '100%', maxWidth: 480, margin: '0 auto', padding: '28px 18px 60px' }
 const box: CSSProperties = {
   background: 'var(--color-surface)', border: '1px solid #F2E4E8',
   borderRadius: 'var(--radius-card)', padding: 18,

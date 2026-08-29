@@ -55,7 +55,7 @@ export default function LoungeEntry() {
   }
 
   return (
-    <main style={{ maxWidth: 420, margin: '0 auto', padding: 24 }}>
+    <main style={{ width: '100%', maxWidth: 420, margin: '0 auto', padding: 24 }}>
       <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>{t.title}</h1>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
@@ -91,7 +91,8 @@ export default function LoungeEntry() {
       />
 
       <button onClick={() => setOpenRole(!openRole)} style={toggleStyle}>
-        {t.roleToggle} {openRole ? '▴' : '▾'}
+        {t.roleToggle}
+        <span style={{ fontSize: 17, lineHeight: 1 }}>{openRole ? '▴' : '▾'}</span>
       </button>
 
       {openRole && (
@@ -140,11 +141,19 @@ const inputStyle: CSSProperties = {
   marginTop: 6,
 }
 
+/* 학생 피드백 2026-08-28 — "이 버튼이 눌러질 수 있는건지 처음에 잘 몰랐습니다 (모바일)"
+   테두리를 주고 화살표를 키워서 누를 수 있게 생기게 했습니다 */
 const toggleStyle: CSSProperties = {
-  background: 'none',
-  border: 'none',
-  color: 'var(--color-text-sub)',
-  fontSize: 13,
-  padding: '12px 0',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  marginTop: 10,
+  background: 'var(--color-surface)',
+  border: '1px solid var(--color-primary)',
+  borderRadius: 'var(--radius-full)',
+  color: 'var(--color-text)',
+  fontSize: 14,
+  fontWeight: 500,
+  padding: '10px 16px',
   cursor: 'pointer',
 }

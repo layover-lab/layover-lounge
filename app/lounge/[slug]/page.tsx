@@ -14,10 +14,11 @@ type Msg = {
   body: string
   client_msg_id: string | null
   created_at: string
+  participant_id: string | null
   participants: { name: string; color_key: string; role: string | null } | null
 }
 
-const SELECT = 'id, body, client_msg_id, created_at, participants(name, color_key, role)'
+const SELECT = 'id, body, client_msg_id, created_at, participant_id, participants(name, color_key, role)'
 
 export default function Stage() {
   const { slug } = useParams<{ slug: string }>()
@@ -49,22 +50,25 @@ export default function Stage() {
       if (!r || cancelled) return
       setRoom(r)
 
-      const { data: existing } = await supabase
-        .from('participants').select('id')
-        .eq('room_id', r.id).eq('client_id', me.clientId).maybeSingle()
-
-      let pid = existing?.id
-      if (!pid) {
-        const { data: created } = await supabase.from('participants').insert({
-          room_id: r.id,
-          client_id: me.clientId,
-          name: me.name,
-          role: me.role || null,
-          color_key: me.colorKey,
-          avatar: me.avatar,
-        }).select('id').single()
-        pid = created?.id
-      }
+      /* 이미 있는 행을 재사용만 하면 나갔다 들어와서 역할을 바꿔도 옛 이름이 남습니다.
+         upsert 로 매번 이름·역할·색을 덮어씁니다 (학생 피드백 2026-08-26) */
+      const { data: joined, error: joinError } = await supabase
+        .from('participants')
+        .upsert(
+          {
+            room_id: r.id,
+            client_id: me.clientId,
+            name: me.name,
+            role: me.role || null,
+            color_key: me.colorKey,
+            avatar: me.avatar,
+          },
+          { onConflict: 'room_id,client_id' }
+        )
+        .select('id')
+        .single()
+      if (joinError) console.error('참가자 등록 실패:', joinError)
+      const pid = joined?.id
       if (cancelled) return
       setParticipantId(pid ?? null)
 
@@ -120,6 +124,7 @@ export default function Stage() {
         body,
         client_msg_id: clientMsgId,
         created_at: new Date().toISOString(),
+        participant_id: participantId,
         participants: { name: me.name, color_key: me.colorKey, role: me.role || null },
       },
     ])
@@ -137,7 +142,7 @@ export default function Stage() {
   if (!room) return <main style={{ padding: 24 }}>...</main>
 
   return (
-    <main style={{ maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+    <main style={{ width: '100%', maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <header style={{ background: '#FDE3EE', padding: '14px 16px' }}>
         <button onClick={() => router.push('/lounge')} style={backStyle}>← {t.back}</button>
         <div style={{ fontWeight: 700 }}>{room.title}</div>
@@ -150,24 +155,31 @@ export default function Stage() {
         {messages.length === 0 && (
           <p style={{ color: 'var(--color-text-sub)', fontSize: 13, textAlign: 'center' }}>{t.empty}</p>
         )}
-        {messages.map((m) => (
-          <div key={m.id} style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 12, marginBottom: 4 }}>
-              <span style={{
-                display: 'inline-block', width: 8, height: 8, borderRadius: 999,
-                background: 'var(--role-' + (m.participants?.color_key ?? 'pink') + ')',
-                marginRight: 6,
-              }} />
-              {m.participants?.role && (
-                <span style={{ color: 'var(--color-text-sub)', marginRight: 4 }}>
-                  {m.participants.role}
-                </span>
-              )}
-              <strong>{m.participants?.name}</strong>
+        {messages.map((m) => {
+          /* 내가 친 것과 남이 친 것을 한눈에 가릅니다 (학생 피드백 2026-08-28) */
+          const mine = !!participantId && m.participant_id === participantId
+          return (
+            <div key={m.id} style={{
+              marginBottom: 14, display: 'flex', flexDirection: 'column',
+              alignItems: mine ? 'flex-end' : 'flex-start',
+            }}>
+              <div style={{ fontSize: 12, marginBottom: 4 }}>
+                <span style={{
+                  display: 'inline-block', width: 8, height: 8, borderRadius: 999,
+                  background: 'var(--role-' + (m.participants?.color_key ?? 'pink') + ')',
+                  marginRight: 6,
+                }} />
+                {m.participants?.role && (
+                  <span style={{ color: 'var(--color-text-sub)', marginRight: 4 }}>
+                    {m.participants.role}
+                  </span>
+                )}
+                <strong>{m.participants?.name}</strong>
+              </div>
+              <div style={mine ? myBubbleStyle : bubbleStyle}>{m.body}</div>
             </div>
-            <div style={bubbleStyle}>{m.body}</div>
-          </div>
-        ))}
+          )
+        })}
         <div ref={bottomRef} />
       </div>
 
@@ -197,6 +209,13 @@ const bubbleStyle: CSSProperties = {
   display: 'inline-block', background: 'var(--color-surface)',
   border: '1px solid #F2E4E8', borderRadius: 'var(--radius-bubble)',
   padding: '10px 14px', fontSize: 15, maxWidth: '85%', whiteSpace: 'pre-wrap',
+}
+
+/* 내 말풍선 — 핑크 틴트. 글자는 --color-text 라 대비가 유지됩니다 */
+const myBubbleStyle: CSSProperties = {
+  ...bubbleStyle,
+  background: 'var(--color-primary-tint)',
+  border: '1px solid var(--color-primary)',
 }
 
 const sendStyle: CSSProperties = {
