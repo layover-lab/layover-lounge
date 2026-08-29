@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { pickLang, dict, type Lang } from '@/lib/i18n'
@@ -8,6 +8,7 @@ import { pickLang, dict, type Lang } from '@/lib/i18n'
 const ME_KEY = 'layover.me'
 
 type Me = { clientId: string; colorKey: string; name: string; role: string; avatar: string }
+type Member = { id: string; name: string; role: string | null; color_key: string }
 type Msg = {
   id: string
   body: string
@@ -22,13 +23,32 @@ const SELECT = 'id, body, client_msg_id, created_at, participant_id, participant
 export default function Stage() {
   const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
-  const [room, setRoom] = useState<{ id: string; title: string; situation: string | null } | null>(null)
+  const [room, setRoom] = useState<{ id: string; title: string; situation: string | null; capacity: number | null } | null>(null)
   const [participantId, setParticipantId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Msg[]>([])
   const [text, setText] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const [lang, setLang] = useState<Lang>('ja')
   const t = dict(lang).room
+
+  /* 학생 피드백 2026-08-29 (트리파노소마) —
+     "방 안에 몇 명이 있는지, 어떤 역할이 있는지 알기 어렵다.
+      역할극이 목적인 방인데 이런 정보를 아는 게 중요한 것 같다"
+
+     ⚠️ 「지금 접속 중」이 아니라 「이 방에 들어온 사람」입니다.
+        접속 여부는 Realtime presence 가 있어야 알 수 있는데,
+        그건 동시 연결을 더 먹어서 지금은 안 씁니다 (5.14 와 같은 이유). */
+  const [members, setMembers] = useState<Member[]>([])
+  const [showMembers, setShowMembers] = useState(false)
+
+  const loadMembers = useCallback(async (roomId: string) => {
+    const { data } = await supabase
+      .from('participants')
+      .select('id, name, role, color_key')
+      .eq('room_id', roomId)
+      .order('joined_at')
+    setMembers((data as Member[]) ?? [])
+  }, [])
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null
@@ -47,7 +67,7 @@ export default function Stage() {
       const me: Me = JSON.parse(saved)
 
       const { data: r, error: roomError } = await supabase
-        .from('rooms').select('id, title, situation').eq('slug', slug).single()
+        .from('rooms').select('id, title, situation, capacity').eq('slug', slug).single()
       if (roomError) {
         console.error('방 조회 실패:', roomError)
         return
@@ -76,6 +96,7 @@ export default function Stage() {
       const pid = joined?.id
       if (cancelled) return
       setParticipantId(pid ?? null)
+      await loadMembers(r.id)
 
       const { data: rows } = await supabase
         .from('messages').select(SELECT)
@@ -109,7 +130,7 @@ export default function Stage() {
       cancelled = true
       if (channel) supabase.removeChannel(channel)
     }
-  }, [slug, router])
+  }, [slug, router, loadMembers])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -150,10 +171,44 @@ export default function Stage() {
     <main style={{ width: '100%', maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <header style={{ background: '#FDE3EE', padding: '14px 16px' }}>
         <button onClick={() => router.push('/lounge')} style={backStyle}>← {t.back}</button>
-        <div style={{ fontWeight: 700 }}>{room.title}</div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <div style={{ fontWeight: 700 }}>{room.title}</div>
+          <button
+            onClick={() => {
+              const next = !showMembers
+              setShowMembers(next)
+              if (next) loadMembers(room.id)   /* 열 때마다 최신으로 */
+            }}
+            aria-expanded={showMembers}
+            style={membersBtnStyle}
+          >
+            👥 {members.length}{room.capacity ? ` / ${room.capacity}` : ''} {showMembers ? '▴' : '▾'}
+          </button>
+        </div>
+
         <div style={{ fontSize: 12, color: 'var(--color-text-sub)', marginTop: 4 }}>
           📌 {room.situation}
         </div>
+
+        {showMembers && (
+          <ul style={memberListStyle}>
+            {members.length === 0 && (
+              <li style={{ fontSize: 13, color: 'var(--color-text-sub)' }}>{t.membersEmpty}</li>
+            )}
+            {members.map((m) => (
+              <li key={m.id} style={memberRowStyle}>
+                <i style={{
+                  width: 8, height: 8, borderRadius: 999, flex: 'none',
+                  background: `var(--role-${m.color_key})`,
+                }} />
+                {m.role && <span style={{ color: 'var(--color-text-sub)' }}>{m.role}</span>}
+                <strong>{m.name}</strong>
+                {m.id === participantId && <span style={youTagStyle}>{t.you}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
       </header>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 16, background: 'var(--color-surface-sub)' }}>
@@ -203,6 +258,27 @@ export default function Stage() {
       </div>
     </main>
   )
+}
+
+const membersBtnStyle: CSSProperties = {
+  flex: 'none', background: 'var(--color-surface)', border: '1px solid #F2C9DA',
+  borderRadius: 'var(--radius-full)', padding: '6px 12px',
+  fontSize: 13, fontWeight: 600, color: 'var(--color-text)', cursor: 'pointer',
+}
+
+const memberListStyle: CSSProperties = {
+  listStyle: 'none', margin: '12px 0 0', padding: '12px 0 0',
+  borderTop: '1px solid #F2C9DA',
+  display: 'flex', flexDirection: 'column', gap: 8,
+}
+
+const memberRowStyle: CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 7, fontSize: 14,
+}
+
+const youTagStyle: CSSProperties = {
+  fontSize: 11, padding: '1px 7px', borderRadius: 'var(--radius-full)',
+  background: 'var(--color-primary)', color: 'var(--color-text)',
 }
 
 const backStyle: CSSProperties = {

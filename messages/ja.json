@@ -12,7 +12,10 @@
     "placeholder": "メッセージを入力",
     "send": "送信",
     "empty": "まだだれも話していません",
-    "back": "もどる"
+    "back": "もどる",
+    "members": "参加者",
+    "you": "じぶん",
+    "membersEmpty": "まだ だれもいません"
   },
   "colors": {
     "yellow": "イエロー",
