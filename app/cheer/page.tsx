@@ -9,7 +9,7 @@ import LangToggle from '@/components/LangToggle'
 import { track } from '@/lib/analytics'
 
 /* ─────────────────────────────────────────────────────────
-   응원 방 (기획서 5.10)
+   응원방 (기획서 5.14)
 
    멤놀방과 다른 물건입니다 — 정원이 없고, 한 줄 남기고 나가는 곳이라
    실시간을 쓰지 않습니다. 동시 접속 여유를 멤놀방에 남겨둡니다.
@@ -34,7 +34,7 @@ type Me = { clientId: string; colorKey: string; name: string; role: string; avat
 
 const SELECT = 'id, body, created_at, room_id, participants(name, color_key)'
 
-export default function CheerWall() {
+export default function CheerRoom() {
   const [lang, setLang] = useState<Lang>('ja')
   const t = dict(lang).cheer
   const colorNames = dict(lang).colors as Record<string, string>
@@ -91,7 +91,7 @@ export default function CheerWall() {
     document.documentElement.lang = picked
 
     /* cutie-type 에서 ?c=pink 로 넘어옵니다. 색 하나만 넘어옵니다 — 이름은 넘어오지 않습니다.
-       기획서 4.16 에서 c 는 「내 색」입니다. 대상 색은 여기 벽에서 고릅니다.
+       기획서 4.16 에서 c 는 「내 색」입니다. 대상 색은 여기 응원방에서 고릅니다.
        필터는 전체로 둡니다 — 한 색만 걸어두면 초기에 썰렁해 보입니다 (4.6 빈 방 문제). */
     const c = /[?&]c=([a-z]+)/.exec(window.location.search)?.[1]
     if (c && (COLOR_KEYS as readonly string[]).includes(c)) {
