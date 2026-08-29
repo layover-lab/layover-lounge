@@ -6,6 +6,7 @@ import { COLOR_KEYS, type ColorKey } from '@/lib/colors'
 import { getClientId } from '@/lib/client-id'
 import { pickLang, dict, type Lang } from '@/lib/i18n'
 import LangToggle from '@/components/LangToggle'
+import { track } from '@/lib/analytics'
 
 /* ─────────────────────────────────────────────────────────
    응원 방 (기획서 5.10)
@@ -98,6 +99,13 @@ export default function CheerWall() {
       setTarget(c as ColorKey)
     }
 
+    /* 테스트의 bridge_click 과 짝이 되는 도착 지점입니다.
+       이게 없으면 다리를 건넌 사람이 실제로 도착했는지 알 수 없습니다 */
+    const from = /[?&]from=([a-z0-9-]+)/i.exec(window.location.search)?.[1]
+    track(from ? 'bridge_arrive' : 'cheer_landing', {
+      from: from ?? 'direct', result: c, lang: picked,
+    })
+
     try {
       const saved = localStorage.getItem(ME_KEY)
       if (saved) {
@@ -127,7 +135,9 @@ export default function CheerWall() {
   }
 
   function again() {
-    setTarget(nextColor())
+    const next = nextColor()
+    track('cheer_again', { result: next, lang })
+    setTarget(next)
     setSent(null)
     setNote('')
     inputRef.current?.focus()
@@ -187,6 +197,8 @@ export default function CheerWall() {
     setText('')
     setBusy(false)
     setSent(target)
+    /* 이 방의 목표 행동입니다 — 4.11 의 등록 수와 함께 제일 위에서 봐야 합니다 */
+    track('cheer_sent', { result: target, lang })
     await loadRows(rooms)
     await loadCounts()
   }
@@ -302,9 +314,11 @@ export default function CheerWall() {
         {/* 멤놀방이 뭔지 모르는 사람이 있어서 한 줄 설명을 답니다 */}
         <p style={{ fontSize: 13, color: 'var(--color-text-sub)', margin: '6px 0 0' }}>{t.notifyLead}</p>
         <p style={{ fontSize: 13, color: 'var(--color-text-sub)', margin: '4px 0 14px' }}>{t.notifyBody}</p>
-        <a href={INSTAGRAM} target="_blank" rel="noopener noreferrer" style={ctaBtn}>{t.notifyButton}</a>
+        <a href={INSTAGRAM} target="_blank" rel="noopener noreferrer" style={ctaBtn}
+           onClick={() => track('notify_signup', { via: 'instagram', lang })}>{t.notifyButton}</a>
         {/* 유튜브는 보조입니다 — 주 버튼이 둘이면 아무것도 안 눌립니다 */}
-        <a href={YOUTUBE} target="_blank" rel="noopener noreferrer" style={ctaGhost}>{t.notifyYoutube}</a>
+        <a href={YOUTUBE} target="_blank" rel="noopener noreferrer" style={ctaGhost}
+           onClick={() => track('notify_signup', { via: 'youtube', lang })}>{t.notifyYoutube}</a>
       </section>
     </main>
   )
