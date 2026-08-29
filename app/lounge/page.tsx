@@ -63,8 +63,8 @@ export default function LoungeEntry() {
 
   return (
     <main style={{ width: '100%', maxWidth: 420, margin: '0 auto', padding: 24 }}>
-      {/* 언어 버튼 — 화면 오른쪽 위 고정 */}
-      <div style={{ position: 'fixed', top: 12, right: 12, zIndex: 10 }}>
+      {/* 언어 버튼 — 제목 위 한 줄. 떠 있으면 모바일에서 제목을 덮습니다 */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
         <LangToggle lang={lang} onChange={setLang} />
       </div>
 
