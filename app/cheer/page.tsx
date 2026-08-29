@@ -70,11 +70,13 @@ export default function CheerWall() {
   useEffect(() => {
     setLang(pickLang())
 
-    /* cutie-type 에서 ?c=pink 로 넘어옵니다. 색 하나만 넘어옵니다 — 이름은 넘어오지 않습니다 */
+    /* cutie-type 에서 ?c=pink 로 넘어옵니다. 색 하나만 넘어옵니다 — 이름은 넘어오지 않습니다.
+       기획서 4.16 에서 c 는 「내 색」입니다. 대상 색은 여기 벽에서 고릅니다.
+       필터는 전체로 둡니다 — 한 색만 걸어두면 초기에 썰렁해 보입니다 (4.6 빈 방 문제). */
     const c = /[?&]c=([a-z]+)/.exec(window.location.search)?.[1]
     if (c && (COLOR_KEYS as readonly string[]).includes(c)) {
+      setMyColor(c as ColorKey)
       setTarget(c as ColorKey)
-      setFilter(c as ColorKey)
     }
 
     try {
@@ -82,7 +84,10 @@ export default function CheerWall() {
       if (saved) {
         const me: Me = JSON.parse(saved)
         setName(me.name ?? '')
-        if ((COLOR_KEYS as readonly string[]).includes(me.colorKey)) setMyColor(me.colorKey as ColorKey)
+        /* 이름만 가져옵니다. 색은 ?c= 로 온 게 있으면 그쪽이 최신입니다 */
+        if (!c && (COLOR_KEYS as readonly string[]).includes(me.colorKey)) {
+          setMyColor(me.colorKey as ColorKey)
+        }
       }
     } catch {}
 
