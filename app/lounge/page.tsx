@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { COLOR_KEYS, type ColorKey } from '@/lib/colors'
 import { getClientId } from '@/lib/client-id'
 import { pickLang, dict, type Lang } from '@/lib/i18n'
+import LangToggle from '@/components/LangToggle'
 
 const ME_KEY = 'layover.me'
 
@@ -62,6 +63,12 @@ export default function LoungeEntry() {
 
   return (
     <main style={{ width: '100%', maxWidth: 420, margin: '0 auto', padding: 24 }}>
+      {/* 언어 버튼 — 화면 오른쪽 위 고정 */}
+      <div style={{ position: 'fixed', top: 12, right: 12, zIndex: 10 }}>
+        <LangToggle lang={lang} onChange={setLang} />
+      </div>
+
+
       <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>{t.title}</h1>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>

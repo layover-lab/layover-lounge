@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { pickLang, dict, type Lang } from '@/lib/i18n'
+import LangToggle from '@/components/LangToggle'
 
 const ME_KEY = 'layover.me'
 
@@ -170,7 +171,11 @@ export default function Stage() {
   return (
     <main style={{ width: '100%', maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <header style={{ background: '#FDE3EE', padding: '14px 16px' }}>
-        <button onClick={() => router.push('/lounge')} style={backStyle}>← {t.back}</button>
+        {/* 오른쪽 위는 👥 가 쓰고 있어서 나가기 줄에 둡니다 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <button onClick={() => router.push('/lounge')} style={backStyle}>← {t.back}</button>
+          <LangToggle lang={lang} onChange={setLang} />
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <div style={{ fontWeight: 700 }}>{room.title}</div>
@@ -282,7 +287,7 @@ const youTagStyle: CSSProperties = {
 }
 
 const backStyle: CSSProperties = {
-  background: 'none', border: 'none', padding: 0, marginBottom: 6,
+  background: 'none', border: 'none', padding: 0,
   fontSize: 12, color: 'var(--color-text-sub)', cursor: 'pointer',
 }
 

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { COLOR_KEYS, type ColorKey } from '@/lib/colors'
 import { getClientId } from '@/lib/client-id'
 import { pickLang, dict, type Lang } from '@/lib/i18n'
+import LangToggle from '@/components/LangToggle'
 
 /* ─────────────────────────────────────────────────────────
    응원 방 (기획서 5.10)
@@ -171,6 +172,11 @@ export default function CheerWall() {
 
   return (
     <main style={wrap}>
+      {/* 언어 버튼 — 화면 오른쪽 위 고정 */}
+      <div style={{ position: 'fixed', top: 12, right: 12, zIndex: 10 }}>
+        <LangToggle lang={lang} onChange={setLang} />
+      </div>
+
       <header style={{ marginBottom: 18 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{t.title}</h1>
         <p style={{ fontSize: 13, color: 'var(--color-text-sub)', margin: '4px 0 0' }}>{t.lead}</p>
