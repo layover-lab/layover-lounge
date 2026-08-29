@@ -309,16 +309,24 @@ const sendBtn: CSSProperties = {
   padding: '0 18px', borderRadius: 'var(--radius-full)', border: 'none',
   background: 'var(--color-primary)', fontWeight: 600, cursor: 'pointer',
 }
-const ctaBtn: CSSProperties = {
+/* 두 버튼은 글꼴·크기·높이를 같게 두고, 위계는 채움 여부로만 만듭니다 */
+const ctaBase: CSSProperties = {
   display: 'block', padding: '14px 18px', borderRadius: 'var(--radius-full)',
-  background: 'var(--color-primary)', color: 'var(--color-text)',
-  fontWeight: 700, textDecoration: 'none',
+  color: 'var(--color-text)', fontSize: 16, fontWeight: 700,
+  textDecoration: 'none', textAlign: 'center',
 }
+
+const ctaBtn: CSSProperties = {
+  ...ctaBase,
+  background: 'var(--color-primary)',
+  border: '1.5px solid var(--color-primary)',
+}
+/* 회색 글씨로 두면 「지금 못 누르는 버튼」처럼 보입니다 */
 const ctaGhost: CSSProperties = {
-  display: 'block', marginTop: 8, padding: '12px 18px',
-  borderRadius: 'var(--radius-full)',
-  border: '1px solid #F2E4E8', background: 'var(--color-surface)',
-  color: 'var(--color-text-sub)', fontSize: 14, fontWeight: 600, textDecoration: 'none',
+  ...ctaBase,
+  marginTop: 8,
+  background: 'var(--color-surface)',
+  border: '1.5px solid var(--color-primary)',
 }
 
 const linkBtn: CSSProperties = {
