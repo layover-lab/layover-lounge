@@ -50,6 +50,10 @@ export default function CheerWall() {
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
   const lastSent = useRef(0)
+  /* 방금 남긴 색 — 남긴 직후 확인 줄에 씁니다.
+     확인이 없으면 내 글이 폼 「위쪽」 목록에 붙어서 남겨졌는지도 모릅니다 */
+  const [sent, setSent] = useState<ColorKey | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   /* 방 목록 → 색 ↔ room_id 표 */
   const loadRooms = useCallback(async () => {
@@ -113,6 +117,22 @@ export default function CheerWall() {
   const colorOf = (roomId: string) =>
     (Object.keys(rooms) as ColorKey[]).find((k) => rooms[k] === roomId) ?? 'pink'
 
+  /* 아직 하나도 없는 색을 먼저 권합니다 — 칩이 전부 0 인 화면이 제일 썰렁합니다 (기획서 4.6).
+     남은 색 중 무작위로 고릅니다. 순서대로 고르면 모두가 같은 색으로 몰립니다 */
+  function nextColor(): ColorKey {
+    const rest = COLOR_KEYS.filter((k) => k !== target)
+    const empty = rest.filter((k) => !(counts[k] ?? 0))
+    const pool = empty.length ? empty : rest
+    return pool[Math.floor(Math.random() * pool.length)]
+  }
+
+  function again() {
+    setTarget(nextColor())
+    setSent(null)
+    setNote('')
+    inputRef.current?.focus()
+  }
+
   const shown = filter ? rows.filter((r) => rooms[filter] === r.room_id) : rows
   const total = Object.values(counts).reduce((a, b) => a + b, 0)
 
@@ -166,6 +186,7 @@ export default function CheerWall() {
     lastSent.current = Date.now()
     setText('')
     setBusy(false)
+    setSent(target)
     await loadRows(rooms)
     await loadCounts()
   }
@@ -246,8 +267,9 @@ export default function CheerWall() {
 
         <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
           <input
+            ref={inputRef}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => { setText(e.target.value); if (sent) setSent(null) }}
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) send() }}
             placeholder={t.placeholder}
             maxLength={MAX_LEN}
@@ -258,6 +280,15 @@ export default function CheerWall() {
           </button>
         </div>
         {note && <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--color-primary-strong)' }}>{note}</p>}
+
+        {/* 남긴 직후 — 확인과 재참여를 한 줄에서 끝냅니다.
+            버튼이 아니라 링크입니다. 아래 팔로우 버튼과 경쟁하면 안 됩니다 (기획서 4.15) */}
+        {sent && !note && (
+          <div style={sentRow}>
+            <span><i style={{ ...dot(sent), marginRight: 6 }} />{t.sentOk}</span>
+            <button onClick={again} style={againBtn}>{t.sendAnother}</button>
+          </div>
+        )}
 
         {/* 안내는 입력칸 아래에 둡니다 — 위에 있으면 쓰기도 전에 혼나는 화면이 됩니다 */}
         <div style={noticeBox}>
@@ -332,6 +363,14 @@ const ctaGhost: CSSProperties = {
 const linkBtn: CSSProperties = {
   background: 'none', border: 'none', padding: 0, cursor: 'pointer',
   fontSize: 12, color: 'var(--color-text-sub)', textDecoration: 'underline',
+}
+const sentRow: CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  gap: 10, marginTop: 10, fontSize: 13,
+}
+/* 링크 크기로 두되, 회색은 벗깁니다 — 회색이면 안내문으로 보여서 안 눌립니다 */
+const againBtn: CSSProperties = {
+  ...linkBtn, fontSize: 13, fontWeight: 600, color: 'var(--color-text)',
 }
 function chip(on: boolean, k?: ColorKey): CSSProperties {
   return {
