@@ -17,6 +17,7 @@ import { pickLang, dict, type Lang } from '@/lib/i18n'
 
 const ME_KEY = 'layover.me'
 const INSTAGRAM = 'https://www.instagram.com/eugene_k_seoul/'
+const YOUTUBE   = 'https://www.youtube.com/@Eugenekseoul'
 const MAX_LEN = 200
 const COOLDOWN_MS = 10_000
 
@@ -257,6 +258,8 @@ export default function CheerWall() {
         <b style={{ fontSize: 15 }}>{t.notifyTitle}</b>
         <p style={{ fontSize: 13, color: 'var(--color-text-sub)', margin: '6px 0 14px' }}>{t.notifyBody}</p>
         <a href={INSTAGRAM} target="_blank" rel="noopener noreferrer" style={ctaBtn}>{t.notifyButton}</a>
+        {/* 유튜브는 보조입니다 — 주 버튼이 둘이면 아무것도 안 눌립니다 */}
+        <a href={YOUTUBE} target="_blank" rel="noopener noreferrer" style={ctaGhost}>{t.notifyYoutube}</a>
       </section>
     </main>
   )
@@ -290,12 +293,20 @@ const ctaBtn: CSSProperties = {
   background: 'var(--color-primary)', color: 'var(--color-text)',
   fontWeight: 700, textDecoration: 'none',
 }
+const ctaGhost: CSSProperties = {
+  display: 'block', marginTop: 8, padding: '12px 18px',
+  borderRadius: 'var(--radius-full)',
+  border: '1px solid #F2E4E8', background: 'var(--color-surface)',
+  color: 'var(--color-text-sub)', fontSize: 14, fontWeight: 600, textDecoration: 'none',
+}
+
 const linkBtn: CSSProperties = {
   background: 'none', border: 'none', padding: 0, cursor: 'pointer',
   fontSize: 12, color: 'var(--color-text-sub)', textDecoration: 'underline',
 }
 function chip(on: boolean, k?: ColorKey): CSSProperties {
   return {
+    flex: 'none', whiteSpace: 'nowrap',   /* 가로 스크롤 줄에서 칩이 찌그러지지 않게 */
     padding: k ? '7px 9px' : '7px 12px', borderRadius: 'var(--radius-full)',
     border: on ? '1px solid var(--color-text)' : '1px solid #F2E4E8',
     background: 'var(--color-surface)', cursor: 'pointer', fontSize: 13,
