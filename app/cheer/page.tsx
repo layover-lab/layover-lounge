@@ -38,6 +38,8 @@ export default function CheerWall() {
 
   const [rooms, setRooms] = useState<Record<ColorKey, string>>({} as Record<ColorKey, string>)
   const [rows, setRows] = useState<Row[]>([])
+  /* 색깔별 개수 — 화면은 최근 50개만 불러와서, 로드된 것으로 세면 51개째부터 틀어집니다 */
+  const [counts, setCounts] = useState<Record<string, number>>({})
   const [filter, setFilter] = useState<ColorKey | null>(null)
   const [target, setTarget] = useState<ColorKey>('pink')
   const [name, setName] = useState('')
@@ -54,6 +56,13 @@ export default function CheerWall() {
     for (const r of data ?? []) map[r.slug.replace('cheer-', '') as ColorKey] = r.id
     setRooms(map)
     return map
+  }, [])
+
+  const loadCounts = useCallback(async () => {
+    const { data } = await supabase.from('cheer_counts').select('color_key, n')
+    const next: Record<string, number> = {}
+    for (const r of data ?? []) next[r.color_key as string] = Number(r.n)
+    setCounts(next)
   }, [])
 
   const loadRows = useCallback(async (map: Record<ColorKey, string>) => {
@@ -96,12 +105,14 @@ export default function CheerWall() {
     } catch {}
 
     loadRooms().then(loadRows)
-  }, [loadRooms, loadRows])
+    loadCounts()
+  }, [loadRooms, loadRows, loadCounts])
 
   const colorOf = (roomId: string) =>
     (Object.keys(rooms) as ColorKey[]).find((k) => rooms[k] === roomId) ?? 'pink'
 
   const shown = filter ? rows.filter((r) => rooms[filter] === r.room_id) : rows
+  const total = Object.values(counts).reduce((a, b) => a + b, 0)
 
   async function send() {
     const body = text.trim()
@@ -154,6 +165,7 @@ export default function CheerWall() {
     setText('')
     setBusy(false)
     await loadRows(rooms)
+    await loadCounts()
   }
 
   return (
@@ -164,17 +176,33 @@ export default function CheerWall() {
       </header>
 
       {/* 색 필터 — 전체가 기본입니다. 8개로 나누면 초기에 방마다 두세 개라 썰렁합니다 */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-        <button onClick={() => setFilter(null)} style={chip(filter === null)}>{t.all}</button>
+      {/* 칩이 9개라 접으면 둘째 줄에 하나만 남습니다. 한 줄로 두고 옆으로 밀리게 합니다 */}
+      <div style={{
+        display: 'flex', gap: 6, marginBottom: 14,
+        overflowX: 'auto', paddingBottom: 4,
+        scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch',
+      }}>
+        <button onClick={() => setFilter(null)} style={chip(filter === null)}>
+          {t.all}{total > 0 ? ` ${total}` : ''}
+        </button>
         {COLOR_KEYS.map((k) => (
-          <button key={k} onClick={() => setFilter(k)} style={chip(filter === k, k)} aria-label={colorNames[k]}>
+          <button
+            key={k}
+            onClick={() => setFilter(k)}
+            style={chip(filter === k, k)}
+            aria-label={`${colorNames[k]} ${counts[k] ?? 0}`}
+          >
             <i style={dot(k)} />
+            {/* 0 일 땐 숫자를 안 씁니다 — 0 이 여덟 개 늘어서 있으면 더 썰렁해 보입니다 */}
+            {(counts[k] ?? 0) > 0 && (
+              <span style={{ marginLeft: 5, fontSize: 12, fontWeight: 600 }}>{counts[k]}</span>
+            )}
           </button>
         ))}
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-        <button onClick={() => loadRows(rooms)} style={linkBtn}>{t.refresh}</button>
+        <button onClick={() => { loadRows(rooms); loadCounts() }} style={linkBtn}>{t.refresh}</button>
       </div>
 
       <section style={{ marginBottom: 26 }}>
@@ -197,7 +225,8 @@ export default function CheerWall() {
         <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--color-text-sub)' }}>{t.noticeRealPerson}</p>
 
         <label style={label}>{t.toWhom}</label>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+        {/* 8개가 한 줄에 들어가도록 크기를 맞춥니다 — 하나만 다음 줄로 넘어가면 덜 만든 것처럼 보입니다 */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
           {COLOR_KEYS.map((k) => (
             <button key={k} onClick={() => setTarget(k)} style={swatch(target === k, k)} aria-label={colorNames[k]} />
           ))}
@@ -281,7 +310,7 @@ function dot(k?: ColorKey): CSSProperties {
 }
 function swatch(on: boolean, k: ColorKey): CSSProperties {
   return {
-    width: 34, height: 34, borderRadius: 'var(--radius-full)',
+    flex: 1, aspectRatio: '1', maxWidth: 38, borderRadius: 'var(--radius-full)',
     background: `var(--role-${k})`,
     border: on ? '3px solid var(--color-text)' : '3px solid transparent',
     cursor: 'pointer',
