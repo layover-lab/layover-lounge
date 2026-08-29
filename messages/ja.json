@@ -2,7 +2,7 @@
   "entry": {
     "title": "きょうは だれになる?",
     "nameLabel": "なまえ",
-    "namePlaceholder": "みゆ",
+    "namePlaceholder": "みかん",
     "roleToggle": "ちがう役をやりたい",
     "rolePlaceholder": "教官",
     "submit": "はじめる",
@@ -28,24 +28,25 @@
     "pink": "ピンク"
   },
   "cheer": {
-    "title": "応援ルーム",
-    "lead": "色にひとこと のこしてください",
+    "title": "推しを応援するルーム",
+    "lead": "言いたかったこと、ここにどうぞ",
     "all": "ぜんぶ",
     "toWhom": "どの色にのこしますか?",
     "placeholder": "ひとこと",
     "send": "のこす",
     "empty": "まだ何もありません。最初のひとことをどうぞ",
     "refresh": "更新",
-    "nameLabel": "なまえ",
-    "namePlaceholder": "みゆ",
-    "noticeDelete": "書いたら消せません。やさしい言葉でお願いします 🌷",
-    "noticeRealPerson": "実在の人物の名前は使えません",
+    "nameLabel": "ニックネームは?",
+    "namePlaceholder": "",
+    "noticeDelete": "推しのファンらしく、やさしい言葉で 🌷",
+    "noticeRealPerson": "スクショが出回ると推しに迷惑がかかるかもしれないので 🙏",
     "notifyTitle": "9月末、遊べる場所がオープンします",
     "notifyBody": "オープンしたらインスタでお知らせします。フォローしていただけると制作の励みになります 🌷",
     "notifyButton": "インスタをフォローする",
     "sending": "のこしています…",
     "cooldown": "少しあとで もういちど のこせます",
     "tooMany": "きょうは じゅうぶん のこしてくれました。また あとで どうぞ",
-    "notifyYoutube": "▶ YouTubeも登録する"
+    "notifyYoutube": "▶ YouTubeも登録する",
+    "noticeColor": "ここでは色だけで呼びます —「イエロー」みたいに 😉"
   }
 }

@@ -228,8 +228,9 @@ export default function CheerWall() {
       </section>
 
       <section style={box}>
-        <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 600 }}>{t.noticeDelete}</p>
-        <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--color-text-sub)' }}>{t.noticeRealPerson}</p>
+        {/* 규칙은 입력칸 위 — 쓰고 나서 보면 늦습니다 */}
+        <p style={noticeStrong}>{t.noticeColor}</p>
+        <p style={{ ...noticeSoft, marginBottom: 16 }}>{t.noticeRealPerson}</p>
 
         <label style={label}>{t.toWhom}</label>
         {/* 8개가 한 줄에 들어가도록 크기를 맞춥니다 — 하나만 다음 줄로 넘어가면 덜 만든 것처럼 보입니다 */}
@@ -257,6 +258,11 @@ export default function CheerWall() {
           </button>
         </div>
         {note && <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--color-primary-strong)' }}>{note}</p>}
+
+        {/* 안내는 입력칸 아래에 둡니다 — 위에 있으면 쓰기도 전에 혼나는 화면이 됩니다 */}
+        <div style={noticeBox}>
+          <p style={noticeSoft}>{t.noticeDelete}</p>
+        </div>
       </section>
 
       {/* 응원을 남긴 직후가 가장 우호적인 순간입니다 (기획서 4.11 — 등록 수가 가장 중요) */}
@@ -283,6 +289,13 @@ const item: CSSProperties = {
 const emptyStyle: CSSProperties = {
   fontSize: 13, color: 'var(--color-text-sub)', textAlign: 'center', padding: '28px 0',
 }
+const noticeBox: CSSProperties = {
+  marginTop: 16, paddingTop: 14, borderTop: '1px solid #F7EDF1',
+  display: 'flex', flexDirection: 'column', gap: 6,
+}
+const noticeStrong: CSSProperties = { margin: 0, fontSize: 12.5, fontWeight: 600, lineHeight: 1.55 }
+const noticeSoft: CSSProperties = { margin: 0, fontSize: 12, color: 'var(--color-text-sub)', lineHeight: 1.55 }
+
 const label: CSSProperties = {
   display: 'block', fontSize: 12, color: 'var(--color-text-sub)', marginBottom: 6,
 }
