@@ -37,8 +37,10 @@ export type Item = {
   /** 이 아이템이 담당하는 색. 없으면 null */
   colorKey: ColorName | null;
   nameKo: string;
-  /** 비어 있으면 nameKo 를 씁니다. 9월에 채웁니다 */
+  /** 비어 있으면 nameKo 를 씁니다 */
   nameJa: string;
+  /** 비어 있으면 nameKo 를 씁니다 */
+  nameEn: string;
 };
 
 /** 그림이 있는 곳. 파일명 = code + 확장자 */
@@ -48,11 +50,11 @@ export const ITEM_IMAGE_DIR = '/dressroom/items';
 export const ITEM_IMAGE_EXT = '.svg';
 
 /** 카테고리 탭 이름 */
-export const CATEGORIES: { key: Category; nameKo: string; nameJa: string }[] = [
-  { key: 'dress', nameKo: '드레스', nameJa: 'ドレス' },
-  { key: 'blouse', nameKo: '블라우스', nameJa: 'ブラウス' },
-  { key: 'head', nameKo: '헤드', nameJa: 'ヘッド' },
-  { key: 'accessory', nameKo: '소품', nameJa: 'こもの' },
+export const CATEGORIES: { key: Category; nameKo: string; nameJa: string; nameEn: string }[] = [
+  { key: 'dress', nameKo: '드레스', nameJa: 'ドレス', nameEn: 'Dresses' },
+  { key: 'blouse', nameKo: '블라우스', nameJa: 'ブラウス', nameEn: 'Blouses' },
+  { key: 'head', nameKo: '헤드', nameJa: 'ヘッド', nameEn: 'Headwear' },
+  { key: 'accessory', nameKo: '소품', nameJa: 'こもの', nameEn: 'Accessories' },
 ];
 
 /* ──────────────────────────────────────────────────────────
@@ -76,26 +78,26 @@ export const BASE_LAYERS: { code: string; z: number; nameKo: string }[] = [
    ────────────────────────────────────────────────────────── */
 export const ITEMS: Item[] = [
   // ── 블라우스 (z 30) — 드레스보다 아래
-  { code: 'white-blouse-01',   category: 'blouse', z: 30, colorKey: null, nameKo: '화이트 블라우스',      nameJa: 'ホワイトブラウス' },
-  { code: 'frill-blouse-cream',category: 'blouse', z: 30, colorKey: null, nameKo: '프릴 블라우스 · 크림', nameJa: 'フリルブラウス・クリーム' },
+  { code: 'white-blouse-01',   category: 'blouse', z: 30, colorKey: null, nameKo: '화이트 블라우스',      nameJa: 'ホワイトブラウス', nameEn: 'White Blouse' },
+  { code: 'frill-blouse-cream',category: 'blouse', z: 30, colorKey: null, nameKo: '프릴 블라우스 · 크림', nameJa: 'フリルブラウス・クリーム', nameEn: 'Frill Blouse · Cream' },
 
   // ── 드레스 (z 50) — 색은 드레스가 아니라 소품이 냅니다 (기획서 9.6)
-  { code: 'rose-jsk-ivory',    category: 'dress',  z: 50, colorKey: null, nameKo: '로즈 JSK · 아이보리',  nameJa: 'ローズJSK・アイボリー' },
-  { code: 'rose-op-cream',     category: 'dress',  z: 50, colorKey: null, nameKo: '로즈 OP · 크림',       nameJa: 'ローズOP・クリーム' },
+  { code: 'rose-jsk-ivory',    category: 'dress',  z: 50, colorKey: null, nameKo: '로즈 JSK · 아이보리',  nameJa: 'ローズJSK・アイボリー', nameEn: 'Rose JSK · Ivory' },
+  { code: 'rose-op-cream',     category: 'dress',  z: 50, colorKey: null, nameKo: '로즈 OP · 크림',       nameJa: 'ローズOP・クリーム', nameEn: 'Rose OP · Cream' },
 
   // ── 헤드웨어 (z 85)
-  { code: 'rose-bonnet-ivory', category: 'head',   z: 85, colorKey: null, nameKo: '로즈 보닛 · 아이보리', nameJa: 'ローズボンネット・アイボリー' },
-  { code: 'katyusha-lace',     category: 'head',   z: 85, colorKey: null, nameKo: '레이스 카츄샤',        nameJa: 'レースカチューシャ' },
+  { code: 'rose-bonnet-ivory', category: 'head',   z: 85, colorKey: null, nameKo: '로즈 보닛 · 아이보리', nameJa: 'ローズボンネット・アイボリー', nameEn: 'Rose Bonnet · Ivory' },
+  { code: 'katyusha-lace',     category: 'head',   z: 85, colorKey: null, nameKo: '레이스 카츄샤',        nameJa: 'レースカチューシャ', nameEn: 'Lace Headband' },
 
   // ── 소품 (z 90) — 8색을 하나씩 담당합니다
   //    캐릭터가 색을 고르면 그 색 소품이 먼저 보입니다.
   //    소품 착용 데이터가 곧 굿즈 신청 라인업이 됩니다.
-  { code: 'lemon-charm',       category: 'accessory', z: 90, colorKey: 'yellow',    nameKo: '레몬 참',        nameJa: 'レモンチャーム' },
-  { code: 'cherry-brooch',     category: 'accessory', z: 90, colorKey: 'red',       nameKo: '체리 브로치',    nameJa: 'チェリーブローチ' },
-  { code: 'clover-pin',        category: 'accessory', z: 90, colorKey: 'green',     nameKo: '클로버 핀',      nameJa: 'クローバーピン' },
-  { code: 'bluebell-corsage',  category: 'accessory', z: 90, colorKey: 'blue',      nameKo: '블루벨 코사지',  nameJa: 'ブルーベルコサージュ' },
-  { code: 'apricot-ribbon',    category: 'accessory', z: 90, colorKey: 'orange',    nameKo: '살구 리본',      nameJa: 'アプリコットリボン' },
-  { code: 'soda-charm',        category: 'accessory', z: 90, colorKey: 'lightblue', nameKo: '소다 참',        nameJa: 'ソーダチャーム' },
-  { code: 'lavender-ribbon',   category: 'accessory', z: 90, colorKey: 'purple',    nameKo: '라벤더 리본',    nameJa: 'ラベンダーリボン' },
-  { code: 'peach-bow',         category: 'accessory', z: 90, colorKey: 'pink',      nameKo: '피치 보우',      nameJa: 'ピーチリボン' },
+  { code: 'lemon-charm',       category: 'accessory', z: 90, colorKey: 'yellow',    nameKo: '레몬 참',        nameJa: 'レモンチャーム', nameEn: 'Lemon Charm' },
+  { code: 'cherry-brooch',     category: 'accessory', z: 90, colorKey: 'red',       nameKo: '체리 브로치',    nameJa: 'チェリーブローチ', nameEn: 'Cherry Brooch' },
+  { code: 'clover-pin',        category: 'accessory', z: 90, colorKey: 'green',     nameKo: '클로버 핀',      nameJa: 'クローバーピン', nameEn: 'Clover Pin' },
+  { code: 'bluebell-corsage',  category: 'accessory', z: 90, colorKey: 'blue',      nameKo: '블루벨 코사지',  nameJa: 'ブルーベルコサージュ', nameEn: 'Bluebell Corsage' },
+  { code: 'apricot-ribbon',    category: 'accessory', z: 90, colorKey: 'orange',    nameKo: '살구 리본',      nameJa: 'アプリコットリボン', nameEn: 'Apricot Ribbon' },
+  { code: 'soda-charm',        category: 'accessory', z: 90, colorKey: 'lightblue', nameKo: '소다 참',        nameJa: 'ソーダチャーム', nameEn: 'Soda Charm' },
+  { code: 'lavender-ribbon',   category: 'accessory', z: 90, colorKey: 'purple',    nameKo: '라벤더 리본',    nameJa: 'ラベンダーリボン', nameEn: 'Lavender Ribbon' },
+  { code: 'peach-bow',         category: 'accessory', z: 90, colorKey: 'pink',      nameKo: '피치 보우',      nameJa: 'ピーチリボン', nameEn: 'Peach Bow' },
 ];

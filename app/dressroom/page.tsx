@@ -134,9 +134,10 @@ export default function DressroomPage() {
       .sort((a, b) => a.z - b.z)
   }, [worn])
 
-  /* items.ts 에는 아직 한국어·일본어만 있습니다. 영어는 한국어를 씁니다 —
-     실물 상품 코드로 갈아끼울 때(9월) nameEn 을 같이 채우면 여기만 한 줄 늘어납니다 */
-  const name = (i: Item) => (lang === 'ja' && i.nameJa ? i.nameJa : i.nameKo)
+  /* 비어 있으면 한국어로 떨어집니다 — 9월에 실물 상품 코드로 갈아끼울 때
+     한 언어를 빠뜨려도 화면이 비지 않게 */
+  const name = (i: Item) =>
+    (lang === 'ja' ? i.nameJa : lang === 'en' ? i.nameEn : i.nameKo) || i.nameKo
   const tabName = (c: Category) =>
     ({ dress: t.tabDress, blouse: t.tabBlouse, head: t.tabHead, accessory: t.tabAccessory }[c])
 
