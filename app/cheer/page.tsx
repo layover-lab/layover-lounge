@@ -4,8 +4,11 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { supabase } from '@/lib/supabase'
 import { COLOR_KEYS, type ColorKey } from '@/lib/colors'
 import { getClientId } from '@/lib/client-id'
-import { pickLang, dict, type Lang } from '@/lib/i18n'
+import { dict, type Lang } from '@/lib/i18n'
+import { useLang } from '@/lib/use-lang'
+import { loadMe, saveMe } from '@/lib/me'
 import LangToggle from '@/components/LangToggle'
+import RoomNav from '@/components/RoomNav'
 import { track } from '@/lib/analytics'
 
 /* ─────────────────────────────────────────────────────────
@@ -17,7 +20,6 @@ import { track } from '@/lib/analytics'
    ⚠️ 색깔에만 남깁니다. 실존 인물 이름은 3.5 위반입니다.
    ───────────────────────────────────────────────────────── */
 
-const ME_KEY = 'layover.me'
 const INSTAGRAM = 'https://www.instagram.com/eugene_k_seoul/'
 const YOUTUBE   = 'https://www.youtube.com/@Eugenekseoul'
 const MAX_LEN = 200
@@ -30,12 +32,11 @@ type Row = {
   room_id: string
   participants: { name: string; color_key: string } | null
 }
-type Me = { clientId: string; colorKey: string; name: string; role: string; avatar: string }
 
 const SELECT = 'id, body, created_at, room_id, participants(name, color_key)'
 
 export default function CheerRoom() {
-  const [lang, setLang] = useState<Lang>('ja')
+  const [lang, setLang] = useLang((picked) => onFirstOpen(picked))
   const t = dict(lang).cheer
   const colorNames = dict(lang).colors as Record<string, string>
 
@@ -83,13 +84,9 @@ export default function CheerRoom() {
     setRows((data as unknown as Row[]) ?? [])
   }, [])
 
-  useEffect(() => {
-    const picked = pickLang()
-    setLang(picked)
-    /* <html lang> 을 실제 언어로 맞춥니다.
-       안 맞으면 크롬이 "다른 언어 페이지"로 보고 번역을 걸어서 글자가 뭉갭니다. */
-    document.documentElement.lang = picked
-
+  /* 첫 진입에 한 번. useLang 이 언어를 정한 직후 불립니다 (lib/use-lang.ts) —
+     계측에 언어가 실려야 해서 상태가 갱신되기를 기다리지 않고 여기서 받습니다 */
+  function onFirstOpen(picked: Lang) {
     /* cutie-type 에서 ?c=pink 로 넘어옵니다. 색 하나만 넘어옵니다 — 이름은 넘어오지 않습니다.
        기획서 4.16 에서 c 는 「내 색」입니다. 대상 색은 여기 응원방에서 고릅니다.
        필터는 전체로 둡니다 — 한 색만 걸어두면 초기에 썰렁해 보입니다 (4.6 빈 방 문제). */
@@ -106,21 +103,18 @@ export default function CheerRoom() {
       from: from ?? 'direct', result: c, lang: picked,
     })
 
-    try {
-      const saved = localStorage.getItem(ME_KEY)
-      if (saved) {
-        const me: Me = JSON.parse(saved)
-        setName(me.name ?? '')
-        /* 이름만 가져옵니다. 색은 ?c= 로 온 게 있으면 그쪽이 최신입니다 */
-        if (!c && (COLOR_KEYS as readonly string[]).includes(me.colorKey)) {
-          setMyColor(me.colorKey as ColorKey)
-        }
+    const me = loadMe()
+    if (me) {
+      setName(me.name ?? '')
+      /* 이름만 가져옵니다. 색은 ?c= 로 온 게 있으면 그쪽이 최신입니다 */
+      if (!c && (COLOR_KEYS as readonly string[]).includes(me.colorKey)) {
+        setMyColor(me.colorKey as ColorKey)
       }
-    } catch {}
+    }
 
     loadRooms().then(loadRows)
     loadCounts()
-  }, [loadRooms, loadRows, loadCounts])
+  }
 
   const colorOf = (roomId: string) =>
     (Object.keys(rooms) as ColorKey[]).find((k) => rooms[k] === roomId) ?? 'pink'
@@ -160,11 +154,7 @@ export default function CheerRoom() {
     const clientId = getClientId()
 
     /* 이름·색을 기억해둡니다 — 라운지 입장 화면과 같은 칸을 씁니다 */
-    try {
-      localStorage.setItem(ME_KEY, JSON.stringify({
-        clientId, colorKey: myColor, name: name.trim(), role: '', avatar: 'preset-01',
-      }))
-    } catch {}
+    saveMe({ clientId, colorKey: myColor, name: name.trim(), role: '', avatar: 'preset-01' })
 
     const { data: existing } = await supabase
       .from('participants').select('id')
@@ -320,6 +310,8 @@ export default function CheerRoom() {
         <a href={YOUTUBE} target="_blank" rel="noopener noreferrer" style={ctaGhost}
            onClick={() => track('notify_signup', { via: 'youtube', lang })}>{t.notifyYoutube}</a>
       </section>
+
+      <RoomNav lang={lang} here="cheer" />
     </main>
   )
 }

@@ -3,12 +3,10 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { pickLang, dict, type Lang } from '@/lib/i18n'
+import { dict } from '@/lib/i18n'
+import { useLang } from '@/lib/use-lang'
+import { loadMe } from '@/lib/me'
 import LangToggle from '@/components/LangToggle'
-
-const ME_KEY = 'layover.me'
-
-type Me = { clientId: string; colorKey: string; name: string; role: string; avatar: string }
 type Member = { id: string; name: string; role: string | null; color_key: string }
 type Msg = {
   id: string
@@ -29,7 +27,7 @@ export default function Stage() {
   const [messages, setMessages] = useState<Msg[]>([])
   const [text, setText] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
-  const [lang, setLang] = useState<Lang>('ja')
+  const [lang, setLang] = useLang()
   const t = dict(lang).room
 
   /* 학생 피드백 2026-08-29 (트리파노소마) —
@@ -55,17 +53,12 @@ export default function Stage() {
     let channel: ReturnType<typeof supabase.channel> | null = null
     let cancelled = false
 
-    const picked = pickLang()
-    setLang(picked)
-    document.documentElement.lang = picked
-
     async function join() {
-      const saved = localStorage.getItem(ME_KEY)
-      if (!saved) {
-        router.push('/lounge')
+      const me = loadMe()
+      if (!me) {
+        router.push('/lounge')      /* 이름·색을 아직 안 정한 사람 */
         return
       }
-      const me: Me = JSON.parse(saved)
 
       const { data: r, error: roomError } = await supabase
         .from('rooms').select('id, title, situation, capacity').eq('slug', slug).single()
@@ -141,7 +134,7 @@ export default function Stage() {
     const body = text.trim()
     if (!body || !room || !participantId) return
     const clientMsgId = crypto.randomUUID()
-    const me: Me = JSON.parse(localStorage.getItem(ME_KEY)!)
+    const me = loadMe()!
     setText('')
 
     setMessages((prev) => [

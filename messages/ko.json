@@ -52,6 +52,11 @@
     "sentOk": "남겼어요! 위에 올라와 있어요 🌷",
     "sendAnother": "다른 색에도 남기기"
   },
+  "nav": {
+    "lounge": "멤놀방",
+    "cheer": "응원방",
+    "dressroom": "드레스룸"
+  },
   "dressroom": {
     "title": "드레스룸",
     "lead": "눌러서 바로 입혀보세요. 가입 안 해도 돼요",

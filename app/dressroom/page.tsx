@@ -1,13 +1,15 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useCallback, useMemo, useState, type CSSProperties } from 'react'
 import {
   BASE_LAYERS, CATEGORIES, ITEMS, ITEM_IMAGE_DIR, ITEM_IMAGE_EXT,
   type Category, type Item,
 } from './items'
-import { pickLang, dict, type Lang } from '@/lib/i18n'
+import { dict, type Lang } from '@/lib/i18n'
+import { useLang } from '@/lib/use-lang'
 import { track } from '@/lib/analytics'
 import LangToggle from '@/components/LangToggle'
+import RoomNav from '@/components/RoomNav'
 
 /* ─────────────────────────────────────────────────────────
    드레스룸 (기획서 6장)
@@ -51,18 +53,15 @@ function toLook(worn: Worn): string {
 }
 
 export default function DressroomPage() {
-  const [lang, setLang] = useState<Lang>('ja')
+  const [lang, setLang] = useLang((picked) => onFirstOpen(picked))
   const t = dict(lang).dressroom
 
   const [worn, setWorn] = useState<Worn>(DEFAULT_LOOK)
   const [tab, setTab] = useState<Category>('dress')
   const [note, setNote] = useState('')
 
-  useEffect(() => {
-    const picked = pickLang()
-    setLang(picked)
-    document.documentElement.lang = picked      /* 안 맞추면 크롬이 번역을 겁니다 */
-
+  /* 첫 진입에 한 번. useLang 이 언어를 정한 직후 불립니다 (lib/use-lang.ts) */
+  function onFirstOpen(picked: Lang) {
     const fromUrl = parseLook(window.location.search)
     if (fromUrl) {
       setWorn(fromUrl)
@@ -70,7 +69,7 @@ export default function DressroomPage() {
     } else {
       track('dressroom_view', { lang: picked })
     }
-  }, [])
+  }
 
   /* 주소를 계속 최신 코디로 맞춥니다 — 새로고침해도, 주소를 복사해도 그대로 */
   const writeUrl = useCallback((next: Worn) => {
@@ -214,6 +213,8 @@ export default function DressroomPage() {
       <button onClick={() => apply(DEFAULT_LOOK)} style={{ ...ctaGhost, width: '100%', marginTop: 16 }}>
         {t.reset}
       </button>
+
+      <RoomNav lang={lang} here="dressroom" />
     </main>
   )
 }

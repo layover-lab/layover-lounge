@@ -4,10 +4,11 @@ import { useEffect, useState, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { COLOR_KEYS, type ColorKey } from '@/lib/colors'
 import { getClientId } from '@/lib/client-id'
-import { pickLang, dict, type Lang } from '@/lib/i18n'
+import { dict } from '@/lib/i18n'
+import { useLang } from '@/lib/use-lang'
+import { loadMe, saveMe } from '@/lib/me'
 import LangToggle from '@/components/LangToggle'
-
-const ME_KEY = 'layover.me'
+import RoomNav from '@/components/RoomNav'
 
 export default function LoungeEntry() {
   const router = useRouter()
@@ -15,19 +16,14 @@ export default function LoungeEntry() {
   const [name, setName] = useState('')
   const [role, setRole] = useState('')
   const [openRole, setOpenRole] = useState(false)
-  const [lang, setLang] = useState<Lang>('ja')
+  const [lang, setLang] = useLang()
   const t = dict(lang).entry
   const colorNames = dict(lang).colors as Record<string, string>
 
   useEffect(() => {
-    const picked = pickLang()
-    setLang(picked)
-    document.documentElement.lang = picked   /* 안 맞추면 크롬이 번역을 걸어 글자가 뭉갭니다 */
-
-    const saved = localStorage.getItem(ME_KEY)
-    if (saved) {
-      const me = JSON.parse(saved)
-      setColorKey(me.colorKey ?? 'yellow')
+    const me = loadMe()
+    if (me) {
+      setColorKey((me.colorKey as ColorKey) ?? 'yellow')
       setName(me.name ?? '')
       setRole(me.role ?? '')
       if (me.role) setOpenRole(true)
@@ -48,16 +44,13 @@ export default function LoungeEntry() {
 
   function start() {
     if (!name.trim()) return
-    localStorage.setItem(
-      ME_KEY,
-      JSON.stringify({
-        clientId: getClientId(),
-        colorKey,
-        name: name.trim(),
-        role: role.trim(),
-        avatar: 'preset-01',
-      })
-    )
+    saveMe({
+      clientId: getClientId(),
+      colorKey,
+      name: name.trim(),
+      role: role.trim(),
+      avatar: 'preset-01',
+    })
     router.push('/lounge/japan-trip')
   }
 
@@ -139,6 +132,8 @@ export default function LoungeEntry() {
       >
         {t.submit}
       </button>
+
+      <RoomNav lang={lang} here="lounge" />
     </main>
   )
 }
