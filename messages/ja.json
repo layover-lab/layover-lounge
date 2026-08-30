@@ -15,7 +15,16 @@
     "back": "もどる",
     "members": "参加者",
     "you": "じぶん",
-    "membersEmpty": "まだ だれもいません"
+    "membersEmpty": "まだ だれもいません",
+    "tabStage": "ステージ",
+    "tabBackstage": "バックステージ",
+    "backstageLead": "ここでは キャラクターではなく じぶんとして話します",
+    "emptyBackstage": "はじめる前に きめておきますか?",
+    "tplTitle": "はじめる前に きめておきますか?",
+    "tplQ1": "きょうは何時までできますか?",
+    "tplQ2": "返信はどれくらいの間隔がいいですか?",
+    "tplQ3": "さけたい話題はありますか?",
+    "tplSend": "このまま送る"
   },
   "colors": {
     "yellow": "イエロー",

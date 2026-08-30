@@ -15,7 +15,16 @@
     "back": "나가기",
     "members": "참여자",
     "you": "나",
-    "membersEmpty": "아직 아무도 없어요"
+    "membersEmpty": "아직 아무도 없어요",
+    "tabStage": "무대",
+    "tabBackstage": "백스테이지",
+    "backstageLead": "여기선 캐릭터가 아니라 나로 말해요",
+    "emptyBackstage": "시작하기 전에 정해볼까요?",
+    "tplTitle": "시작하기 전에 정해볼까요?",
+    "tplQ1": "오늘 몇 시까지 가능해요?",
+    "tplQ2": "답장은 어느 정도 간격으로?",
+    "tplQ3": "피하고 싶은 소재가 있나요?",
+    "tplSend": "이대로 보내기"
   },
   "colors": {
     "yellow": "노랑",

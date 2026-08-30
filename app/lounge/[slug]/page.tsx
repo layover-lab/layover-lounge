@@ -8,8 +8,13 @@ import { useLang } from '@/lib/use-lang'
 import { loadMe } from '@/lib/me'
 import LangToggle from '@/components/LangToggle'
 type Member = { id: string; name: string; role: string | null; color_key: string }
+
+/* 같은 방 안의 두 층 (기획서 5.4). 방을 옮기는 게 아니라 탭이 바뀌는 것입니다 */
+type Layer = 'stage' | 'backstage'
+
 type Msg = {
   id: string
+  layer: Layer
   body: string
   client_msg_id: string | null
   created_at: string
@@ -17,7 +22,7 @@ type Msg = {
   participants: { name: string; color_key: string; role: string | null } | null
 }
 
-const SELECT = 'id, body, client_msg_id, created_at, participant_id, participants(name, color_key, role)'
+const SELECT = 'id, layer, body, client_msg_id, created_at, participant_id, participants(name, color_key, role)'
 
 export default function Stage() {
   const { slug } = useParams<{ slug: string }>()
@@ -25,6 +30,9 @@ export default function Stage() {
   const [room, setRoom] = useState<{ id: string; title: string; situation: string | null; capacity: number | null } | null>(null)
   const [participantId, setParticipantId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Msg[]>([])
+  /* 무대와 백스테이지는 같은 방입니다 — 메시지를 한 번에 받아두고 보여줄 때 가릅니다.
+     따로 불러오면 탭을 옮길 때마다 화면이 비었다가 채워집니다 */
+  const [layer, setLayer] = useState<Layer>('stage')
   const [text, setText] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const [lang, setLang] = useLang()
@@ -94,7 +102,7 @@ export default function Stage() {
 
       const { data: rows } = await supabase
         .from('messages').select(SELECT)
-        .eq('room_id', r.id).eq('layer', 'stage')
+        .eq('room_id', r.id)
         .order('created_at')
       if (cancelled) return
       setMessages((rows as unknown as Msg[]) ?? [])
@@ -128,19 +136,20 @@ export default function Stage() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, layer])
 
-  async function send() {
-    const body = text.trim()
+  async function send(raw?: string) {
+    const body = (raw ?? text).trim()
     if (!body || !room || !participantId) return
     const clientMsgId = crypto.randomUUID()
     const me = loadMe()!
-    setText('')
+    if (raw === undefined) setText('')
 
     setMessages((prev) => [
       ...prev,
       {
         id: clientMsgId,
+        layer,
         body,
         client_msg_id: clientMsgId,
         created_at: new Date().toISOString(),
@@ -151,13 +160,16 @@ export default function Stage() {
 
     const { error } = await supabase.from('messages').insert({
       room_id: room.id,
-      layer: 'stage',
+      layer,
       participant_id: participantId,
       body,
       client_msg_id: clientMsgId,
     })
     if (error) console.error('메시지 전송 실패:', error)
   }
+
+  /* 두 층을 한 번에 받아두고 여기서 가릅니다 */
+  const shown = messages.filter((m) => m.layer === layer)
 
   if (!room) return <main style={{ padding: 24 }}>...</main>
 
@@ -209,11 +221,40 @@ export default function Stage() {
         )}
       </header>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: 16, background: 'var(--color-surface-sub)' }}>
-        {messages.length === 0 && (
+      {/* 무대 · 백스테이지 — 같은 방의 두 층입니다 (기획서 5.4) */}
+      <div style={tabBarStyle}>
+        {(['stage', 'backstage'] as const).map((l) => (
+          <button key={l} onClick={() => setLayer(l)} aria-pressed={layer === l} style={layerTabStyle(layer === l)}>
+            {l === 'stage' ? t.tabStage : t.tabBackstage}
+          </button>
+        ))}
+      </div>
+      {layer === 'backstage' && <p style={backstageLeadStyle}>{t.backstageLead}</p>}
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: 16, background: layer === 'backstage' ? BACKSTAGE_BG : 'var(--color-surface-sub)' }}>
+        {shown.length === 0 && layer === 'stage' && (
           <p style={{ color: 'var(--color-text-sub)', fontSize: 13, textAlign: 'center' }}>{t.empty}</p>
         )}
-        {messages.map((m) => {
+
+        {/* 빈 채팅창을 주지 않습니다 — 무엇을 말해야 할지 모르면 아무도 안 씁니다 (5.4) */}
+        {shown.length === 0 && layer === 'backstage' && (
+          <div style={tplCardStyle}>
+            <b style={{ fontSize: 14 }}>{t.tplTitle}</b>
+            <ul style={{ margin: '10px 0 14px', padding: 0, listStyle: 'none', fontSize: 13, lineHeight: 1.9 }}>
+              <li>· {t.tplQ1}</li>
+              <li>· {t.tplQ2}</li>
+              <li>· {t.tplQ3}</li>
+            </ul>
+            <button
+              onClick={() => send([t.tplTitle, '· ' + t.tplQ1, '· ' + t.tplQ2, '· ' + t.tplQ3].join('\n'))}
+              style={tplSendStyle}
+            >
+              {t.tplSend}
+            </button>
+          </div>
+        )}
+
+        {shown.map((m) => {
           /* 내가 친 것과 남이 친 것을 한눈에 가릅니다 (학생 피드백 2026-08-28) */
           const mine = !!participantId && m.participant_id === participantId
           return (
@@ -222,19 +263,24 @@ export default function Stage() {
               alignItems: mine ? 'flex-end' : 'flex-start',
             }}>
               <div style={{ fontSize: 12, marginBottom: 4 }}>
-                <span style={{
-                  display: 'inline-block', width: 8, height: 8, borderRadius: 999,
-                  background: 'var(--role-' + (m.participants?.color_key ?? 'pink') + ')',
-                  marginRight: 6,
-                }} />
-                {m.participants?.role && (
-                  <span style={{ color: 'var(--color-text-sub)', marginRight: 4 }}>
-                    {m.participants.role}
-                  </span>
+                {/* 백스테이지는 「사람」으로 말하는 자리라 캐릭터 표시(색·역할)를 뺍니다 (5.4) */}
+                {layer === 'stage' && (
+                  <>
+                    <span style={{
+                      display: 'inline-block', width: 8, height: 8, borderRadius: 999,
+                      background: 'var(--role-' + (m.participants?.color_key ?? 'pink') + ')',
+                      marginRight: 6,
+                    }} />
+                    {m.participants?.role && (
+                      <span style={{ color: 'var(--color-text-sub)', marginRight: 4 }}>
+                        {m.participants.role}
+                      </span>
+                    )}
+                  </>
                 )}
                 <strong>{m.participants?.name}</strong>
               </div>
-              <div style={mine ? myBubbleStyle : bubbleStyle}>{m.body}</div>
+              <div style={bubbleFor(layer, mine)}>{m.body}</div>
             </div>
           )
         })}
@@ -252,7 +298,7 @@ export default function Stage() {
           maxLength={500}
           style={{ flex: 1, padding: 12, borderRadius: 'var(--radius-full)', border: '1px solid #F2E4E8' }}
         />
-        <button onClick={send} style={sendStyle}>{t.send}</button>
+        <button onClick={() => send()} style={sendStyle}>{t.send}</button>
       </div>
     </main>
   )
@@ -288,6 +334,48 @@ const bubbleStyle: CSSProperties = {
   display: 'inline-block', background: 'var(--color-surface)',
   border: '1px solid #F2E4E8', borderRadius: 'var(--radius-bubble)',
   padding: '10px 14px', fontSize: 15, maxWidth: '85%', whiteSpace: 'pre-wrap',
+}
+
+/* ── 백스테이지 ──────────────────────────────────
+   무대는 깅엄·핑크, 백스테이지는 무지·회청색입니다 (기획서 5.4).
+   색이 바뀌면 「지금 캐릭터가 아니라 나로 말하는 중」이 설명 없이 읽힙니다 */
+const BACKSTAGE_BG = '#F1F4F8'
+
+const tabBarStyle: CSSProperties = {
+  display: 'flex', gap: 6, padding: '10px 16px 0', background: 'var(--color-surface)',
+}
+function layerTabStyle(on: boolean): CSSProperties {
+  return {
+    padding: '7px 14px', borderRadius: 'var(--radius-full)',
+    border: on ? '1px solid var(--color-text)' : '1px solid #F2E4E8',
+    background: on ? 'var(--color-primary-tint)' : 'var(--color-surface)',
+    color: 'var(--color-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+  }
+}
+const backstageLeadStyle: CSSProperties = {
+  margin: 0, padding: '8px 16px', background: BACKSTAGE_BG,
+  fontSize: 12, color: 'var(--color-text-sub)',
+}
+const tplCardStyle: CSSProperties = {
+  background: 'var(--color-surface)', border: '1px solid #DDE5EE',
+  borderRadius: 'var(--radius-card)', padding: 16, textAlign: 'center',
+}
+const tplSendStyle: CSSProperties = {
+  width: '100%', padding: '11px 14px', borderRadius: 'var(--radius-full)',
+  border: '1px solid #C9D6E6', background: '#E6EDF6',
+  color: 'var(--color-text)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+}
+const backBubbleStyle: CSSProperties = {
+  display: 'inline-block', background: '#FFFFFF',
+  border: '1px solid #DDE5EE', borderRadius: 'var(--radius-bubble)',
+  padding: '10px 14px', fontSize: 15, maxWidth: '85%', whiteSpace: 'pre-wrap',
+}
+const myBackBubbleStyle: CSSProperties = {
+  ...backBubbleStyle, background: '#E6EDF6', border: '1px solid #C9D6E6',
+}
+function bubbleFor(layer: Layer, mine: boolean): CSSProperties {
+  if (layer === 'backstage') return mine ? myBackBubbleStyle : backBubbleStyle
+  return mine ? myBubbleStyle : bubbleStyle
 }
 
 /* 내 말풍선 — 핑크 틴트. 글자는 --color-text 라 대비가 유지됩니다 */
