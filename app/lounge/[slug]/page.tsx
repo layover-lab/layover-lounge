@@ -7,6 +7,7 @@ import { dict } from '@/lib/i18n'
 import { useLang } from '@/lib/use-lang'
 import { loadMe } from '@/lib/me'
 import LangToggle from '@/components/LangToggle'
+import { dot, tab } from '@/lib/ui'
 type Member = { id: string; name: string; role: string | null; color_key: string }
 
 /* 같은 방 안의 두 층 (기획서 5.4). 방을 옮기는 게 아니라 탭이 바뀌는 것입니다 */
@@ -208,10 +209,7 @@ export default function Stage() {
             )}
             {members.map((m) => (
               <li key={m.id} style={memberRowStyle}>
-                <i style={{
-                  width: 8, height: 8, borderRadius: 999, flex: 'none',
-                  background: `var(--role-${m.color_key})`,
-                }} />
+                <i style={{ ...dot(m.color_key), flex: 'none' }} />
                 {m.role && <span style={{ color: 'var(--color-text-sub)' }}>{m.role}</span>}
                 <strong>{m.name}</strong>
                 {m.id === participantId && <span style={youTagStyle}>{t.you}</span>}
@@ -224,7 +222,7 @@ export default function Stage() {
       {/* 무대 · 백스테이지 — 같은 방의 두 층입니다 (기획서 5.4) */}
       <div style={tabBarStyle}>
         {(['stage', 'backstage'] as const).map((l) => (
-          <button key={l} onClick={() => setLayer(l)} aria-pressed={layer === l} style={layerTabStyle(layer === l)}>
+          <button key={l} onClick={() => setLayer(l)} aria-pressed={layer === l} style={tab(layer === l)}>
             {l === 'stage' ? t.tabStage : t.tabBackstage}
           </button>
         ))}
@@ -266,11 +264,7 @@ export default function Stage() {
                 {/* 백스테이지는 「사람」으로 말하는 자리라 캐릭터 표시(색·역할)를 뺍니다 (5.4) */}
                 {layer === 'stage' && (
                   <>
-                    <span style={{
-                      display: 'inline-block', width: 8, height: 8, borderRadius: 999,
-                      background: 'var(--role-' + (m.participants?.color_key ?? 'pink') + ')',
-                      marginRight: 6,
-                    }} />
+                    <span style={{ ...dot(m.participants?.color_key), marginRight: 6 }} />
                     {m.participants?.role && (
                       <span style={{ color: 'var(--color-text-sub)', marginRight: 4 }}>
                         {m.participants.role}
@@ -343,14 +337,6 @@ const BACKSTAGE_BG = '#F1F4F8'
 
 const tabBarStyle: CSSProperties = {
   display: 'flex', gap: 6, padding: '10px 16px 0', background: 'var(--color-surface)',
-}
-function layerTabStyle(on: boolean): CSSProperties {
-  return {
-    padding: '7px 14px', borderRadius: 'var(--radius-full)',
-    border: on ? '1px solid var(--color-text)' : '1px solid #F2E4E8',
-    background: on ? 'var(--color-primary-tint)' : 'var(--color-surface)',
-    color: 'var(--color-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-  }
 }
 const backstageLeadStyle: CSSProperties = {
   margin: 0, padding: '8px 16px', background: BACKSTAGE_BG,

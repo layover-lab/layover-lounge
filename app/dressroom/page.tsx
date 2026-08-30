@@ -10,6 +10,7 @@ import { useLang } from '@/lib/use-lang'
 import { track } from '@/lib/analytics'
 import LangToggle from '@/components/LangToggle'
 import RoomNav from '@/components/RoomNav'
+import { LINE, wrap, ctaBtn, ctaGhost, dot, tab } from '@/lib/ui'
 
 /* ─────────────────────────────────────────────────────────
    드레스룸 (기획서 6장)
@@ -57,7 +58,7 @@ export default function DressroomPage() {
   const t = dict(lang).dressroom
 
   const [worn, setWorn] = useState<Worn>(DEFAULT_LOOK)
-  const [tab, setTab] = useState<Category>('dress')
+  const [cat, setCat] = useState<Category>('dress')
   const [note, setNote] = useState('')
 
   /* 첫 진입에 한 번. useLang 이 언어를 정한 직후 불립니다 (lib/use-lang.ts) */
@@ -178,27 +179,27 @@ export default function DressroomPage() {
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-        <button onClick={share} style={ctaBtn}>{t.share}</button>
-        <button onClick={random} style={ctaGhost}>{t.random}</button>
+        <button onClick={share} style={{ ...ctaBtn, flex: 1 }}>{t.share}</button>
+        <button onClick={random} style={{ ...ctaGhost, flex: 1 }}>{t.random}</button>
       </div>
       {note && <p style={{ margin: '-10px 0 16px', fontSize: 12, color: 'var(--color-primary-strong)' }}>{note}</p>}
 
       {/* ── 카테고리 ── */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 12, overflowX: 'auto', paddingBottom: 4 }}>
         {CATEGORIES.map((c) => (
-          <button key={c.key} onClick={() => setTab(c.key)} style={tabBtn(tab === c.key)}>
+          <button key={c.key} onClick={() => setCat(c.key)} style={tab(cat === c.key)}>
             {tabName(c.key)}
           </button>
         ))}
       </div>
 
-      {tab === 'accessory' && (
+      {cat === 'accessory' && (
         <p style={{ fontSize: 12, color: 'var(--color-text-sub)', margin: '0 0 10px' }}>{t.colorNote}</p>
       )}
 
       {/* ── 아이템 ── */}
       <div style={grid}>
-        {ITEMS.filter((i) => i.category === tab).map((i) => {
+        {ITEMS.filter((i) => i.category === cat).map((i) => {
           const on = worn[i.category] === i.code
           return (
             <button key={i.code} onClick={() => wear(i)} style={card(on, i)} aria-pressed={on}>
@@ -210,7 +211,7 @@ export default function DressroomPage() {
         })}
       </div>
 
-      <button onClick={() => apply(DEFAULT_LOOK)} style={{ ...ctaGhost, width: '100%', marginTop: 16 }}>
+      <button onClick={() => apply(DEFAULT_LOOK)} style={{ ...ctaGhost, marginTop: 16 }}>
         {t.reset}
       </button>
 
@@ -219,12 +220,10 @@ export default function DressroomPage() {
   )
 }
 
-/* ── 색은 선·점·테두리에만. 넓은 면을 칠하지 않습니다 (기획서 17장) ── */
-const wrap: CSSProperties = { width: '100%', maxWidth: 480, margin: '0 auto', padding: '24px 18px 60px' }
-
+/* 이 화면에서만 쓰는 조각들. 공통은 lib/ui.ts 에 있습니다 */
 const stage: CSSProperties = {
   position: 'relative', width: '100%', aspectRatio: '3 / 4',
-  background: 'var(--color-surface-sub)', border: '1px solid #F2E4E8',
+  background: 'var(--color-surface-sub)', border: `1px solid ${LINE}`,
   borderRadius: 'var(--radius-card)', overflow: 'hidden',
 }
 const layerImg: CSSProperties = {
@@ -240,7 +239,7 @@ const thumb: CSSProperties = {
 }
 function card(on: boolean, i: Item): CSSProperties {
   /* border 축약형과 borderTop 을 같이 쓰면 리렌더 때 서로 덮어씁니다 — 네 변을 따로 씁니다 */
-  const line = on ? '2px solid var(--color-text)' : '1px solid #F2E4E8'
+  const line = on ? '2px solid var(--color-text)' : `1px solid ${LINE}`
   return {
     padding: 8, cursor: 'pointer', textAlign: 'center',
     background: 'var(--color-surface)',
@@ -249,32 +248,11 @@ function card(on: boolean, i: Item): CSSProperties {
     borderRadius: 'var(--radius-card)', color: 'var(--color-text)',
   }
 }
-function tabBtn(on: boolean): CSSProperties {
-  return {
-    flex: 'none', padding: '8px 14px', borderRadius: 'var(--radius-full)',
-    border: on ? '1px solid var(--color-text)' : '1px solid #F2E4E8',
-    background: on ? 'var(--color-primary)' : 'var(--color-surface)',
-    color: 'var(--color-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-  }
-}
 function chipWorn(i: Item): CSSProperties {
   return {
     display: 'inline-flex', alignItems: 'center', gap: 5,
     padding: '5px 10px', borderRadius: 'var(--radius-full)',
-    background: 'var(--color-surface)', border: '1px solid #F2E4E8',
+    background: 'var(--color-surface)', border: `1px solid ${LINE}`,
     color: 'var(--color-text)', fontSize: 12, cursor: 'pointer',
   }
-}
-function dot(k: string): CSSProperties {
-  return { display: 'inline-block', width: 8, height: 8, borderRadius: 999, background: `var(--role-${k})` }
-}
-const ctaBase: CSSProperties = {
-  flex: 1, padding: '13px 12px', borderRadius: 'var(--radius-full)',
-  color: 'var(--color-text)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-}
-const ctaBtn: CSSProperties = {
-  ...ctaBase, background: 'var(--color-primary)', border: '1.5px solid var(--color-primary)',
-}
-const ctaGhost: CSSProperties = {
-  ...ctaBase, background: 'var(--color-surface)', border: '1.5px solid var(--color-primary)',
 }

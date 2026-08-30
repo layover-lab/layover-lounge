@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import type { CSSProperties } from 'react'
 import { dict, type Lang } from '@/lib/i18n'
+import { tab } from '@/lib/ui'
 
 export type Room = 'lounge' | 'cheer' | 'dressroom'
 
@@ -26,7 +27,7 @@ export default function RoomNav({ lang, here }: { lang: Lang; here: Room }) {
   return (
     <nav style={wrap}>
       {all.filter((r) => r.key !== here).map((r) => (
-        <Link key={r.key} href={r.href} style={pill}>{r.label}</Link>
+        <Link key={r.key} href={r.href} style={tab(false)}>{r.label}</Link>
       ))}
     </nav>
   )
@@ -35,9 +36,4 @@ export default function RoomNav({ lang, here }: { lang: Lang; here: Room }) {
 const wrap: CSSProperties = {
   display: 'flex', justifyContent: 'center', gap: 8,
   marginTop: 28, paddingTop: 18, borderTop: '1px solid #F7EDF1',
-}
-const pill: CSSProperties = {
-  padding: '9px 16px', borderRadius: 'var(--radius-full)',
-  background: 'var(--color-surface)', border: '1px solid #F2E4E8',
-  color: 'var(--color-text)', fontSize: 13, fontWeight: 600, textDecoration: 'none',
 }

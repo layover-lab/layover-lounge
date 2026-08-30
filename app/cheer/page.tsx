@@ -9,6 +9,7 @@ import { useLang } from '@/lib/use-lang'
 import { loadMe, saveMe } from '@/lib/me'
 import LangToggle from '@/components/LangToggle'
 import RoomNav from '@/components/RoomNav'
+import { LINE, wrap, box, ctaBtn, ctaGhost, linkBtn, dot } from '@/lib/ui'
 import { track } from '@/lib/analytics'
 
 /* ─────────────────────────────────────────────────────────
@@ -307,7 +308,7 @@ export default function CheerRoom() {
         <a href={INSTAGRAM} target="_blank" rel="noopener noreferrer" style={ctaBtn}
            onClick={() => track('notify_signup', { via: 'instagram', lang })}>{t.notifyButton}</a>
         {/* 유튜브는 보조입니다 — 주 버튼이 둘이면 아무것도 안 눌립니다 */}
-        <a href={YOUTUBE} target="_blank" rel="noopener noreferrer" style={ctaGhost}
+        <a href={YOUTUBE} target="_blank" rel="noopener noreferrer" style={{ ...ctaGhost, marginTop: 8 }}
            onClick={() => track('notify_signup', { via: 'youtube', lang })}>{t.notifyYoutube}</a>
       </section>
 
@@ -316,12 +317,7 @@ export default function CheerRoom() {
   )
 }
 
-/* ── 색은 선·점·테두리에만. 넓은 면을 칠하지 않습니다 (기획서 17장) ── */
-const wrap: CSSProperties = { width: '100%', maxWidth: 480, margin: '0 auto', padding: '28px 18px 60px' }
-const box: CSSProperties = {
-  background: 'var(--color-surface)', border: '1px solid #F2E4E8',
-  borderRadius: 'var(--radius-card)', padding: 18,
-}
+/* 이 화면에서만 쓰는 조각들. 공통은 lib/ui.ts 에 있습니다 */
 const item: CSSProperties = {
   borderLeft: '3px solid', paddingLeft: 12, marginBottom: 16,
 }
@@ -346,30 +342,6 @@ const sendBtn: CSSProperties = {
   padding: '0 18px', borderRadius: 'var(--radius-full)', border: 'none',
   background: 'var(--color-primary)', fontWeight: 600, cursor: 'pointer',
 }
-/* 두 버튼은 글꼴·크기·높이를 같게 두고, 위계는 채움 여부로만 만듭니다 */
-const ctaBase: CSSProperties = {
-  display: 'block', padding: '14px 18px', borderRadius: 'var(--radius-full)',
-  color: 'var(--color-text)', fontSize: 16, fontWeight: 700,
-  textDecoration: 'none', textAlign: 'center',
-}
-
-const ctaBtn: CSSProperties = {
-  ...ctaBase,
-  background: 'var(--color-primary)',
-  border: '1.5px solid var(--color-primary)',
-}
-/* 회색 글씨로 두면 「지금 못 누르는 버튼」처럼 보입니다 */
-const ctaGhost: CSSProperties = {
-  ...ctaBase,
-  marginTop: 8,
-  background: 'var(--color-surface)',
-  border: '1.5px solid var(--color-primary)',
-}
-
-const linkBtn: CSSProperties = {
-  background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-  fontSize: 12, color: 'var(--color-text-sub)', textDecoration: 'underline',
-}
 const sentRow: CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   gap: 10, marginTop: 10, fontSize: 13,
@@ -382,15 +354,9 @@ function chip(on: boolean, k?: ColorKey): CSSProperties {
   return {
     flex: 'none', whiteSpace: 'nowrap',   /* 가로 스크롤 줄에서 칩이 찌그러지지 않게 */
     padding: k ? '7px 9px' : '7px 12px', borderRadius: 'var(--radius-full)',
-    border: on ? '1px solid var(--color-text)' : '1px solid #F2E4E8',
+    border: on ? '1px solid var(--color-text)' : `1px solid ${LINE}`,
     background: 'var(--color-surface)', cursor: 'pointer', fontSize: 13,
     display: 'flex', alignItems: 'center',
-  }
-}
-function dot(k?: ColorKey): CSSProperties {
-  return {
-    display: 'inline-block', width: 9, height: 9, borderRadius: 999,
-    background: `var(--role-${k ?? 'pink'})`,
   }
 }
 function swatch(on: boolean, k: ColorKey): CSSProperties {
