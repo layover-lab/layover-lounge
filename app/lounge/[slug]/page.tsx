@@ -7,11 +7,27 @@ import { dict } from '@/lib/i18n'
 import { useLang } from '@/lib/use-lang'
 import { loadMe } from '@/lib/me'
 import LangToggle from '@/components/LangToggle'
-import { dot, tab } from '@/lib/ui'
+import { LINE, dot, tab, ctaBtn, ctaGhost, linkBtn } from '@/lib/ui'
 type Member = { id: string; name: string; role: string | null; color_key: string }
 
 /* 같은 방 안의 두 층 (기획서 5.4). 방을 옮기는 게 아니라 탭이 바뀌는 것입니다 */
 type Layer = 'stage' | 'backstage'
+
+/* 기획서 19.3 의 11종. 순서를 바꿔도 되지만 값(코드)은 DB check 와 같아야 합니다 */
+const REASONS = [
+  'harassment', 'abuse', 'sexual', 'stalking', 'personal_info',
+  'impersonation', 'copyright', 'banned_image', 'spam', 'scam', 'other',
+] as const
+type Reason = (typeof REASONS)[number]
+
+/* 숨긴 사람 — 브라우저에만 둡니다.
+   로그인이 없으면 서버 차단은 브라우저만 바꿔도 뚫려서 지키는 척만 하게 됩니다.
+   participants.id 는 방마다 새로 생기므로 이 목록은 자연히 방 단위입니다 (19.2 「숨기기」) */
+const HIDDEN_KEY = 'layover.hidden'
+
+function loadHidden(): string[] {
+  try { return JSON.parse(localStorage.getItem(HIDDEN_KEY) ?? '[]') as string[] } catch { return [] }
+}
 
 type Msg = {
   id: string
@@ -49,6 +65,14 @@ export default function Stage() {
   const [members, setMembers] = useState<Member[]>([])
   const [showMembers, setShowMembers] = useState(false)
 
+  /* 신고·숨기기 (기획서 19장). 숨기지 않고 1탭 안에 둡니다 (19.1) */
+  const [hidden, setHidden] = useState<string[]>([])
+  const [menuFor, setMenuFor] = useState<string | null>(null)      /* ⋯ 를 연 참가자 */
+  const [reportFor, setReportFor] = useState<Msg | null>(null)
+  const [reason, setReason] = useState<Reason | null>(null)
+  const [detail, setDetail] = useState('')
+  const [reportNote, setReportNote] = useState('')
+
   const loadMembers = useCallback(async (roomId: string) => {
     const { data } = await supabase
       .from('participants')
@@ -57,6 +81,38 @@ export default function Stage() {
       .order('joined_at')
     setMembers((data as Member[]) ?? [])
   }, [])
+
+  useEffect(() => { setHidden(loadHidden()) }, [])
+
+  function hidePerson(pid: string) {
+    const next = Array.from(new Set([...hidden, pid]))
+    setHidden(next)
+    try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(next)) } catch {}
+    setMenuFor(null)
+  }
+
+  function unhideAll() {
+    setHidden([])
+    try { localStorage.setItem(HIDDEN_KEY, '[]') } catch {}
+  }
+
+  async function sendReport() {
+    if (!reportFor || !reason || !room) return
+    const { error } = await supabase.from('reports').insert({
+      room_id: room.id,
+      message_id: reportFor.id,
+      reporter_id: participantId,
+      target_id: reportFor.participant_id,
+      reason,
+      detail: detail.trim() || null,
+    })
+    if (error) console.error('신고 접수 실패:', error)
+    /* 접수 여부와 무관하게 같은 문구를 보여줍니다 — 신고했다는 사실이 화면에 오래 남으면
+       옆 사람에게 보입니다. 실패는 콘솔로만 남깁니다 */
+    setReportFor(null); setReason(null); setDetail('')
+    setReportNote(t.reportDone)
+    setTimeout(() => setReportNote(''), 4000)
+  }
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null
@@ -169,8 +225,10 @@ export default function Stage() {
     if (error) console.error('메시지 전송 실패:', error)
   }
 
-  /* 두 층을 한 번에 받아두고 여기서 가릅니다 */
-  const shown = messages.filter((m) => m.layer === layer)
+  /* 두 층을 한 번에 받아두고 여기서 가릅니다. 숨긴 사람도 여기서 빠집니다 */
+  const shown = messages.filter(
+    (m) => m.layer === layer && !(m.participant_id && hidden.includes(m.participant_id))
+  )
 
   if (!room) return <main style={{ padding: 24 }}>...</main>
 
@@ -229,6 +287,14 @@ export default function Stage() {
       </div>
       {layer === 'backstage' && <p style={backstageLeadStyle}>{t.backstageLead}</p>}
 
+      {hidden.length > 0 && (
+        <div style={hiddenBarStyle}>
+          <span>{t.hidden}</span>
+          <button onClick={unhideAll} style={linkBtn}>{t.unhide}</button>
+        </div>
+      )}
+      {reportNote && <p style={reportNoteStyle}>{reportNote}</p>}
+
       <div style={{ flex: 1, overflowY: 'auto', padding: 16, background: layer === 'backstage' ? BACKSTAGE_BG : 'var(--color-surface-sub)' }}>
         {shown.length === 0 && layer === 'stage' && (
           <p style={{ color: 'var(--color-text-sub)', fontSize: 13, textAlign: 'center' }}>{t.empty}</p>
@@ -273,13 +339,67 @@ export default function Stage() {
                   </>
                 )}
                 <strong>{m.participants?.name}</strong>
+                {/* 신고·숨기기는 감추지 않습니다 — 1탭 안에 있어야 씁니다 (기획서 19.1) */}
+                {!mine && m.participant_id && (
+                  <button
+                    onClick={() => setMenuFor(menuFor === m.participant_id ? null : m.participant_id)}
+                    aria-label={t.more}
+                    style={moreStyle}
+                  >⋯</button>
+                )}
               </div>
               <div style={bubbleFor(layer, mine)}>{m.body}</div>
+
+              {menuFor === m.participant_id && !mine && (
+                <div style={menuStyle}>
+                  <button onClick={() => hidePerson(m.participant_id!)} style={menuItemStyle}>{t.hide}</button>
+                  <button onClick={() => { setMenuFor(null); setReportFor(m) }} style={menuItemStyle}>{t.report}</button>
+                </div>
+              )}
             </div>
           )
         })}
         <div ref={bottomRef} />
       </div>
+
+      {reportFor && (
+        <div style={sheetWrapStyle} role="dialog" aria-modal="true">
+          <div style={sheetStyle}>
+            <b style={{ fontSize: 15 }}>{t.reportTitle}</b>
+            {/* 빨간 경고문 대신 담백하게. 그리고 직접 항의하지 말라고 안내합니다 (19.1) */}
+            <p style={{ fontSize: 12, color: 'var(--color-text-sub)', margin: '6px 0 12px', lineHeight: 1.6 }}>
+              {t.reportLead}
+            </p>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+              {REASONS.map((r) => (
+                <button key={r} onClick={() => setReason(r)} style={tab(reason === r)}>
+                  {(t as unknown as Record<string, string>)['r_' + r]}
+                </button>
+              ))}
+            </div>
+
+            {/* 스크린샷을 요구하지 않습니다 — 접수율이 급락합니다 (19.3) */}
+            <textarea
+              value={detail}
+              onChange={(e) => setDetail(e.target.value)}
+              placeholder={t.reportDetail}
+              maxLength={500}
+              rows={3}
+              style={textareaStyle}
+            />
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button onClick={() => { setReportFor(null); setReason(null); setDetail('') }}
+                      style={{ ...ctaGhost, flex: 1, fontSize: 14 }}>{t.close}</button>
+              <button onClick={sendReport} disabled={!reason}
+                      style={{ ...ctaBtn, flex: 1, fontSize: 14, opacity: reason ? 1 : 0.5 }}>
+                {t.reportSubmit}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 8, padding: 12, background: 'var(--color-surface)' }}>
         <input
@@ -334,6 +454,42 @@ const bubbleStyle: CSSProperties = {
    무대는 깅엄·핑크, 백스테이지는 무지·회청색입니다 (기획서 5.4).
    색이 바뀌면 「지금 캐릭터가 아니라 나로 말하는 중」이 설명 없이 읽힙니다 */
 const BACKSTAGE_BG = '#F1F4F8'
+
+const moreStyle: CSSProperties = {
+  background: 'none', border: 'none', cursor: 'pointer',
+  color: 'var(--color-text-sub)', fontSize: 15, lineHeight: 1, padding: '0 6px',
+}
+const menuStyle: CSSProperties = {
+  display: 'flex', gap: 6, marginTop: 6,
+}
+const menuItemStyle: CSSProperties = {
+  padding: '6px 12px', borderRadius: 'var(--radius-full)',
+  border: `1px solid ${LINE}`, background: 'var(--color-surface)',
+  color: 'var(--color-text)', fontSize: 12, cursor: 'pointer',
+}
+const hiddenBarStyle: CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+  padding: '8px 16px', background: 'var(--color-neutral)',
+  fontSize: 12, color: 'var(--color-text-sub)',
+}
+const reportNoteStyle: CSSProperties = {
+  margin: 0, padding: '8px 16px', background: 'var(--color-primary-tint)',
+  fontSize: 12.5, color: 'var(--color-text)',
+}
+const sheetWrapStyle: CSSProperties = {
+  position: 'fixed', inset: 0, background: 'rgba(43,34,38,.35)',
+  display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 20,
+}
+const sheetStyle: CSSProperties = {
+  width: '100%', maxWidth: 480, background: 'var(--color-surface)',
+  borderRadius: '20px 20px 0 0', padding: 20,
+  maxHeight: '80dvh', overflowY: 'auto',
+}
+const textareaStyle: CSSProperties = {
+  width: '100%', padding: 12, fontSize: 14, lineHeight: 1.6,
+  borderRadius: 'var(--radius-card)', border: `1px solid ${LINE}`,
+  background: 'var(--color-bg)', resize: 'none',
+}
 
 const tabBarStyle: CSSProperties = {
   display: 'flex', gap: 6, padding: '10px 16px 0', background: 'var(--color-surface)',
