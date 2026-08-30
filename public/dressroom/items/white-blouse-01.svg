@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="768" height="1024" viewBox="0 0 768 1024" role="img" aria-label="white-blouse-01 placeholder">
+  <!-- 임시 플레이스홀더. 진짜 그림이 오면 같은 이름의 .webp 로 교체됩니다 -->
+  <rect x="286" y="298" width="196" height="250" rx="56" fill="#F3EFF1" stroke="#DED7DB" stroke-width="3"/>
+  <circle cx="286" cy="336" r="34" fill="#F3EFF1" stroke="#DED7DB" stroke-width="3"/>
+  <circle cx="482" cy="336" r="34" fill="#F3EFF1" stroke="#DED7DB" stroke-width="3"/>
+  <text x="18" y="142" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="20" fill="#B3ABB0">white-blouse-01</text>
+</svg>

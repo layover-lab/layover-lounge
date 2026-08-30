@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="768" height="1024" viewBox="0 0 768 1024" role="img" aria-label="rose-bonnet-ivory placeholder">
+  <!-- 임시 플레이스홀더. 진짜 그림이 오면 같은 이름의 .webp 로 교체됩니다 -->
+  <path d="M266,206 Q384,68 502,206 Q384,166 266,206 Z" fill="#E0D9DC"/>
+  <ellipse cx="384" cy="206" rx="126" ry="26" fill="#D5CCD1"/>
+  <path d="M300,222 Q312,300 336,330" fill="none" stroke="#D5CCD1" stroke-width="10"/>
+  <text x="18" y="250" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="20" fill="#B3ABB0">rose-bonnet-ivory</text>
+</svg>
