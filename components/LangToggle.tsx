@@ -24,7 +24,7 @@ export default function LangToggle({
   return (
     <div style={wrap}>
       <span aria-hidden style={globe}>🌐</span>
-      {(['ja', 'ko', 'study'] as const).map((l) => (
+      {(['ja', 'ko', 'en'] as const).map((l) => (
         <button
           key={l}
           type="button"
@@ -34,10 +34,10 @@ export default function LangToggle({
             onChange(l)
           }}
           aria-pressed={l === lang}
-          aria-label={l === 'ja' ? '日本語で表示' : l === 'ko' ? '한국어로 보기' : '한국어と日本語をいっしょに'}
+          aria-label={l === 'ja' ? '日本語で表示' : l === 'ko' ? '한국어로 보기' : 'View in English'}
           style={btn(l === lang)}
         >
-          {l === 'ja' ? '日本語' : l === 'ko' ? '한국어' : '한국어＋日本語'}
+          {l === 'ja' ? '日本語' : l === 'ko' ? '한국어' : 'English'}
         </button>
       ))}
     </div>

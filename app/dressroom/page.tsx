@@ -134,12 +134,9 @@ export default function DressroomPage() {
       .sort((a, b) => a.z - b.z)
   }, [worn])
 
-  /* 사전(lib/i18n)의 공부 모드와 같은 규칙으로 맞춥니다 — 아이템 이름만 다르면 어색합니다 */
-  const name = (i: Item) => {
-    if (lang === 'ja') return i.nameJa || i.nameKo
-    if (lang === 'study' && i.nameJa) return `${i.nameKo} · ${i.nameJa}`
-    return i.nameKo
-  }
+  /* items.ts 에는 아직 한국어·일본어만 있습니다. 영어는 한국어를 씁니다 —
+     실물 상품 코드로 갈아끼울 때(9월) nameEn 을 같이 채우면 여기만 한 줄 늘어납니다 */
+  const name = (i: Item) => (lang === 'ja' && i.nameJa ? i.nameJa : i.nameKo)
   const tabName = (c: Category) =>
     ({ dress: t.tabDress, blouse: t.tabBlouse, head: t.tabHead, accessory: t.tabAccessory }[c])
 
