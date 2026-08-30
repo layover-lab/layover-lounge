@@ -1,7 +1,7 @@
 'use client'
 
 import type { CSSProperties } from 'react'
-import { saveLang, type Lang } from '@/lib/i18n'
+import { saveLang, htmlLang, type Mode } from '@/lib/i18n'
 
 /* 언어를 눈에 보이게 고르는 버튼.
 
@@ -18,26 +18,26 @@ export default function LangToggle({
   lang,
   onChange,
 }: {
-  lang: Lang
-  onChange: (l: Lang) => void
+  lang: Mode
+  onChange: (l: Mode) => void
 }) {
   return (
     <div style={wrap}>
       <span aria-hidden style={globe}>🌐</span>
-      {(['ja', 'ko'] as const).map((l) => (
+      {(['ja', 'ko', 'study'] as const).map((l) => (
         <button
           key={l}
           type="button"
           onClick={() => {
             saveLang(l)
-            document.documentElement.lang = l   /* 안 맞추면 크롬이 번역을 겁니다 */
+            document.documentElement.lang = htmlLang(l)   /* 안 맞추면 크롬이 번역을 겁니다 */
             onChange(l)
           }}
           aria-pressed={l === lang}
-          aria-label={l === 'ja' ? '日本語で表示' : '한국어로 보기'}
+          aria-label={l === 'ja' ? '日本語で表示' : l === 'ko' ? '한국어로 보기' : '한국어と日本語をいっしょに'}
           style={btn(l === lang)}
         >
-          {l === 'ja' ? '日本語' : '한국어'}
+          {l === 'ja' ? '日本語' : l === 'ko' ? '한국어' : '한국어＋日本語'}
         </button>
       ))}
     </div>

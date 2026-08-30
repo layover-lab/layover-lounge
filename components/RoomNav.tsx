@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import type { CSSProperties } from 'react'
-import { dict, type Lang } from '@/lib/i18n'
+import { dict, type Mode } from '@/lib/i18n'
 import { tab } from '@/lib/ui'
 
 export type Room = 'lounge' | 'cheer' | 'dressroom'
@@ -17,7 +17,7 @@ export type Room = 'lounge' | 'cheer' | 'dressroom'
    ⚠️ 채팅방 안(`/lounge/[slug]`)에는 넣지 않습니다. 대화 중에 나가는 링크가
       보이면 몰입이 끊깁니다 — 거기는 뒤로 가기가 이미 있습니다.
    ───────────────────────────────────────────────────────── */
-export default function RoomNav({ lang, here }: { lang: Lang; here: Room }) {
+export default function RoomNav({ lang, here }: { lang: Mode; here: Room }) {
   const t = dict(lang).nav
   const all: { key: Room; href: string; label: string }[] = [
     { key: 'lounge', href: '/lounge', label: t.lounge },

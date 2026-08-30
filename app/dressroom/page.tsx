@@ -5,7 +5,7 @@ import {
   BASE_LAYERS, CATEGORIES, ITEMS, ITEM_IMAGE_DIR, ITEM_IMAGE_EXT,
   type Category, type Item,
 } from './items'
-import { dict, type Lang } from '@/lib/i18n'
+import { dict, type Mode } from '@/lib/i18n'
 import { useLang } from '@/lib/use-lang'
 import { track } from '@/lib/analytics'
 import LangToggle from '@/components/LangToggle'
@@ -62,7 +62,7 @@ export default function DressroomPage() {
   const [note, setNote] = useState('')
 
   /* 첫 진입에 한 번. useLang 이 언어를 정한 직후 불립니다 (lib/use-lang.ts) */
-  function onFirstOpen(picked: Lang) {
+  function onFirstOpen(picked: Mode) {
     const fromUrl = parseLook(window.location.search)
     if (fromUrl) {
       setWorn(fromUrl)
@@ -134,7 +134,12 @@ export default function DressroomPage() {
       .sort((a, b) => a.z - b.z)
   }, [worn])
 
-  const name = (i: Item) => (lang === 'ja' && i.nameJa ? i.nameJa : i.nameKo)
+  /* 사전(lib/i18n)의 공부 모드와 같은 규칙으로 맞춥니다 — 아이템 이름만 다르면 어색합니다 */
+  const name = (i: Item) => {
+    if (lang === 'ja') return i.nameJa || i.nameKo
+    if (lang === 'study' && i.nameJa) return `${i.nameKo} · ${i.nameJa}`
+    return i.nameKo
+  }
   const tabName = (c: Category) =>
     ({ dress: t.tabDress, blouse: t.tabBlouse, head: t.tabHead, accessory: t.tabAccessory }[c])
 

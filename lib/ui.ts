@@ -27,6 +27,10 @@ const ctaBase: CSSProperties = {
   display: 'block', padding: '14px 18px', borderRadius: 'var(--radius-full)',
   color: 'var(--color-text)', fontSize: 16, fontWeight: 700,
   textDecoration: 'none', textAlign: 'center', cursor: 'pointer',
+  /* 가로로 나란히 놓을 때 글자가 버튼 밖으로 넘치지 않게.
+     flex 아이템은 기본이 min-width:auto 라 글자 길이만큼 버티고 안 줄어듭니다 —
+     공부 모드(한국어+일본어)처럼 라벨이 길어지는 순간 바로 터집니다 */
+  minWidth: 0,
 }
 
 export const ctaBtn: CSSProperties = {

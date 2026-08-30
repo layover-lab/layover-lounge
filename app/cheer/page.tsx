@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { supabase } from '@/lib/supabase'
 import { COLOR_KEYS, type ColorKey } from '@/lib/colors'
 import { getClientId } from '@/lib/client-id'
-import { dict, type Lang } from '@/lib/i18n'
+import { dict, type Mode } from '@/lib/i18n'
 import { useLang } from '@/lib/use-lang'
 import { loadMe, saveMe } from '@/lib/me'
 import LangToggle from '@/components/LangToggle'
@@ -87,7 +87,7 @@ export default function CheerRoom() {
 
   /* 첫 진입에 한 번. useLang 이 언어를 정한 직후 불립니다 (lib/use-lang.ts) —
      계측에 언어가 실려야 해서 상태가 갱신되기를 기다리지 않고 여기서 받습니다 */
-  function onFirstOpen(picked: Lang) {
+  function onFirstOpen(picked: Mode) {
     /* cutie-type 에서 ?c=pink 로 넘어옵니다. 색 하나만 넘어옵니다 — 이름은 넘어오지 않습니다.
        기획서 4.16 에서 c 는 「내 색」입니다. 대상 색은 여기 응원방에서 고릅니다.
        필터는 전체로 둡니다 — 한 색만 걸어두면 초기에 썰렁해 보입니다 (4.6 빈 방 문제). */
