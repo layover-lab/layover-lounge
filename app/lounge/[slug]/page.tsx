@@ -134,25 +134,18 @@ export default function Stage() {
       if (!r || cancelled) return
       setRoom(r)
 
-      /* 이미 있는 행을 재사용만 하면 나갔다 들어와서 역할을 바꿔도 옛 이름이 남습니다.
-         upsert 로 매번 이름·역할·색을 덮어씁니다 (학생 피드백 2026-08-26) */
-      const { data: joined, error: joinError } = await supabase
-        .from('participants')
-        .upsert(
-          {
-            room_id: r.id,
-            client_id: me.clientId,
-            name: me.name,
-            role: me.role || null,
-            color_key: me.colorKey,
-            avatar: me.avatar,
-          },
-          { onConflict: 'room_id,client_id' }
-        )
-        .select('id')
-        .single()
+      /* 브라우저는 participants 를 직접 쓰지 않습니다 — client_id 가 오가면 사칭이 됩니다.
+         등록·갱신은 서버 함수 하나로 (20260831140000_join_room_rpc.sql) */
+      const { data: joined, error: joinError } = await supabase.rpc('join_room', {
+        p_room_id: r.id,
+        p_client_id: me.clientId,
+        p_name: me.name,
+        p_color_key: me.colorKey,
+        p_role: me.role || null,
+        p_avatar: me.avatar,
+      })
       if (joinError) console.error('참가자 등록 실패:', joinError)
-      const pid = joined?.id
+      const pid = joined as string | null
       if (cancelled) return
       setParticipantId(pid ?? null)
       await loadMembers(r.id)

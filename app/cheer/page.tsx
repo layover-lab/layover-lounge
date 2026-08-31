@@ -157,19 +157,14 @@ export default function CheerRoom() {
     /* 이름·색을 기억해둡니다 — 라운지 입장 화면과 같은 칸을 씁니다 */
     saveMe({ clientId, colorKey: myColor, name: name.trim(), role: '', avatar: 'preset-01' })
 
-    const { data: existing } = await supabase
-      .from('participants').select('id')
-      .eq('room_id', roomId).eq('client_id', clientId).maybeSingle()
-
-    let pid = existing?.id
-    if (!pid) {
-      const { data: created, error } = await supabase.from('participants').insert({
-        room_id: roomId, client_id: clientId, name: name.trim(),
-        color_key: myColor, avatar: 'preset-01',
-      }).select('id').single()
-      if (error) { console.error('참가자 생성 실패:', error); setBusy(false); return }
-      pid = created?.id
-    }
+    /* 채팅방과 같은 함수를 씁니다. client_id 는 브라우저에서 서버로만 가고 돌아오지 않습니다 */
+    const { data: pid, error: joinError } = await supabase.rpc('join_room', {
+      p_room_id: roomId,
+      p_client_id: clientId,
+      p_name: name.trim(),
+      p_color_key: myColor,
+    })
+    if (joinError || !pid) { console.error('참가자 등록 실패:', joinError); setBusy(false); return }
 
     const { error } = await supabase.from('messages').insert({
       room_id: roomId, layer: 'stage', participant_id: pid,
