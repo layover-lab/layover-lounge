@@ -3,6 +3,7 @@
 import ko from '@/messages/ko.json'
 import ja from '@/messages/ja.json'
 import en from '@/messages/en.json'
+import { KEYS } from '@/lib/storage'
 
 /* ─────────────────────────────────────────────────────────
    기본 언어는 일본어입니다 — 방문자의 95%가 일본어 사용자입니다 (기획서 4.9).
@@ -15,7 +16,7 @@ import en from '@/messages/en.json'
 export type Lang = 'ja' | 'ko' | 'en'
 export type Mode = Lang
 
-const KEY = 'layover.lang'
+const KEY = KEYS.lang
 const MODES: Mode[] = ['ja', 'ko', 'en']
 
 export function pickLang(search?: string): Mode {
@@ -41,6 +42,16 @@ export function saveLang(mode: Mode) {
 /** `<html lang>` 에 넣을 값. 안 맞추면 크롬이 번역을 겁니다 */
 export function htmlLang(mode: Mode): Lang {
   return mode
+}
+
+/* 절대 규칙 ④ — DB 에 저장하는 이름도 언어별로.
+   `title` / `title_ja` / `title_en` 같은 세 컬럼에서 하나를 고릅니다.
+   비어 있으면 한국어로 떨어집니다 — 한 언어를 빠뜨려도 화면이 비지 않게. */
+export function field(row: Record<string, unknown> | null | undefined, base: string, mode: Mode): string {
+  if (!row) return ''
+  const ko = (row[base] as string) ?? ''
+  if (mode === 'ko') return ko
+  return ((row[`${base}_${mode}`] as string) || ko) ?? ''
 }
 
 export function dict(mode: Mode) {

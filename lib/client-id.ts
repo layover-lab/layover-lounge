@@ -1,10 +1,10 @@
-const KEY = 'layover.clientId'
+import { KEYS, readText, writeText } from '@/lib/storage'
 
 export function getClientId(): string {
-  let id = localStorage.getItem(KEY)
+  let id = readText(KEYS.client)
   if (!id) {
     id = crypto.randomUUID()
-    localStorage.setItem(KEY, id)
+    writeText(KEYS.client, id)
   }
   return id
 }

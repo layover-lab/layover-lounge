@@ -5,7 +5,6 @@
     "namePlaceholder": "your nickname",
     "roleToggle": "I'll play a different role",
     "rolePlaceholder": "instructor",
-    "submit": "Start",
     "realPersonWarning": "Please don't use a real person's name or nickname",
     "situations": "Where are you headed today?",
     "needName": "Pick a name first",
@@ -22,7 +21,6 @@
     "tabStage": "Stage",
     "tabBackstage": "Backstage",
     "backstageLead": "Here you speak as yourself, not as your character",
-    "emptyBackstage": "Shall we sort a few things out first?",
     "tplTitle": "Shall we sort a few things out first?",
     "tplQ1": "How long are you free today?",
     "tplQ2": "How often can you reply?",
@@ -40,6 +38,7 @@
     "reportDone": "Got it. We'll take a look 🌷",
     "close": "Close",
     "full": "This gate is full",
+    "notFound": "We couldn't find that",
     "gate": "Gate {n}",
     "r_harassment": "Harassment",
     "r_abuse": "Abusive language",
@@ -106,7 +105,6 @@
     "copyFailed": "Couldn't copy. Please copy the address bar instead",
     "random": "Surprise me",
     "reset": "Start over",
-    "wearing": "Wearing now",
     "nothingOn": "Nothing on yet",
     "colorNote": "The accessories carry the colours"
   }

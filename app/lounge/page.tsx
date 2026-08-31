@@ -5,26 +5,19 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { COLOR_KEYS, type ColorKey } from '@/lib/colors'
 import { getClientId } from '@/lib/client-id'
-import { dict } from '@/lib/i18n'
+import { dict, field } from '@/lib/i18n'
 import { useLang } from '@/lib/use-lang'
 import { loadMe, saveMe } from '@/lib/me'
+import { KEYS, writeText } from '@/lib/storage'
 import LangToggle from '@/components/LangToggle'
 import RoomNav from '@/components/RoomNav'
 import { LINE } from '@/lib/ui'
-import type { Mode } from '@/lib/i18n'
 
 /* 상황 하나 = 게이트 여러 개. 목록에는 1번 게이트만 뜹니다 */
 type Situation = {
   situation_key: string
   title: string; title_ja: string | null; title_en: string | null
   situation: string | null; situation_ja: string | null; situation_en: string | null
-}
-
-/* 절대 규칙 ④ — DB 에 저장하는 이름도 언어별로. 비어 있으면 한국어로 떨어집니다 */
-function text(s: Situation, base: 'title' | 'situation', lang: Mode): string {
-  if (lang === 'ja') return s[`${base}_ja`] || s[base] || ''
-  if (lang === 'en') return s[`${base}_en`] || s[base] || ''
-  return s[base] || ''
 }
 
 export default function LoungeEntry() {
@@ -61,7 +54,7 @@ export default function LoungeEntry() {
     /* 어느 테스트가 사람을 보냈나. events 테이블은 10월이라 지금은 들고만 있습니다 */
     const from = /[?&]from=([a-z0-9-]+)/.exec(window.location.search)?.[1]
     if (from) {
-      try { localStorage.setItem('layover.from', from) } catch {}
+      writeText(KEYS.from, from)
     }
 
     supabase
@@ -170,9 +163,9 @@ export default function LoungeEntry() {
         {situations.map((s) => (
           <button key={s.situation_key} onClick={() => start(s.situation_key)}
                   disabled={!!busy} style={cardStyle}>
-            <b style={{ fontSize: 15 }}>{text(s, 'title', lang)}</b>
+            <b style={{ fontSize: 15 }}>{field(s, 'title', lang)}</b>
             <span style={{ fontSize: 12.5, color: 'var(--color-text-sub)' }}>
-              {busy === s.situation_key ? t.joining : text(s, 'situation', lang)}
+              {busy === s.situation_key ? t.joining : field(s, 'situation', lang)}
             </span>
           </button>
         ))}

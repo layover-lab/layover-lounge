@@ -3,31 +3,17 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { dict } from '@/lib/i18n'
+import { dict, field } from '@/lib/i18n'
 import { useLang } from '@/lib/use-lang'
+import { useHidden } from '@/lib/use-hidden'
 import { loadMe } from '@/lib/me'
 import LangToggle from '@/components/LangToggle'
-import { LINE, dot, tab, ctaBtn, ctaGhost, linkBtn } from '@/lib/ui'
+import ReportSheet from '@/components/ReportSheet'
+import { LINE, dot, tab, ctaBtn, linkBtn } from '@/lib/ui'
 type Member = { id: string; name: string; role: string | null; color_key: string }
 
 /* 같은 방 안의 두 층 (기획서 5.4). 방을 옮기는 게 아니라 탭이 바뀌는 것입니다 */
 type Layer = 'stage' | 'backstage'
-
-/* 기획서 19.3 의 11종. 순서를 바꿔도 되지만 값(코드)은 DB check 와 같아야 합니다 */
-const REASONS = [
-  'harassment', 'abuse', 'sexual', 'stalking', 'personal_info',
-  'impersonation', 'copyright', 'banned_image', 'spam', 'scam', 'other',
-] as const
-type Reason = (typeof REASONS)[number]
-
-/* 숨긴 사람 — 브라우저에만 둡니다.
-   로그인이 없으면 서버 차단은 브라우저만 바꿔도 뚫려서 지키는 척만 하게 됩니다.
-   participants.id 는 방마다 새로 생기므로 이 목록은 자연히 방 단위입니다 (19.2 「숨기기」) */
-const HIDDEN_KEY = 'layover.hidden'
-
-function loadHidden(): string[] {
-  try { return JSON.parse(localStorage.getItem(HIDDEN_KEY) ?? '[]') as string[] } catch { return [] }
-}
 
 type Msg = {
   id: string
@@ -41,16 +27,20 @@ type Msg = {
 
 const SELECT = 'id, layer, body, client_msg_id, created_at, participant_id, participants(name, color_key, role)'
 
+type Room = {
+  id: string; gate_no: number | null; capacity: number | null
+  title: string; title_ja: string | null; title_en: string | null
+  situation: string | null; situation_ja: string | null; situation_en: string | null
+}
+
+/* 화면에 못 들어간 이유. 둘 다 나가는 버튼만 있는 한 장짜리 화면입니다 */
+type Blocked = 'full' | 'missing' | null
+
 export default function Stage() {
   const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
-  type Room = {
-    id: string; gate_no: number | null; capacity: number | null
-    title: string; title_ja: string | null; title_en: string | null
-    situation: string | null; situation_ja: string | null; situation_en: string | null
-  }
   const [room, setRoom] = useState<Room | null>(null)
-  const [full, setFull] = useState(false)
+  const [blocked, setBlocked] = useState<Blocked>(null)
   const [participantId, setParticipantId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Msg[]>([])
   /* 무대와 백스테이지는 같은 방입니다 — 메시지를 한 번에 받아두고 보여줄 때 가릅니다.
@@ -72,11 +62,9 @@ export default function Stage() {
   const [showMembers, setShowMembers] = useState(false)
 
   /* 신고·숨기기 (기획서 19장). 숨기지 않고 1탭 안에 둡니다 (19.1) */
-  const [hidden, setHidden] = useState<string[]>([])
+  const { hidden, hide, unhideAll } = useHidden()
   const [menuFor, setMenuFor] = useState<string | null>(null)      /* ⋯ 를 연 참가자 */
   const [reportFor, setReportFor] = useState<Msg | null>(null)
-  const [reason, setReason] = useState<Reason | null>(null)
-  const [detail, setDetail] = useState('')
   const [reportNote, setReportNote] = useState('')
 
   const loadMembers = useCallback(async (roomId: string) => {
@@ -88,35 +76,9 @@ export default function Stage() {
     setMembers((data as Member[]) ?? [])
   }, [])
 
-  useEffect(() => { setHidden(loadHidden()) }, [])
-
-  function hidePerson(pid: string) {
-    const next = Array.from(new Set([...hidden, pid]))
-    setHidden(next)
-    try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(next)) } catch {}
-    setMenuFor(null)
-  }
-
-  function unhideAll() {
-    setHidden([])
-    try { localStorage.setItem(HIDDEN_KEY, '[]') } catch {}
-  }
-
-  async function sendReport() {
-    if (!reportFor || !reason || !room) return
-    const { error } = await supabase.from('reports').insert({
-      room_id: room.id,
-      message_id: reportFor.id,
-      reporter_id: participantId,
-      target_id: reportFor.participant_id,
-      reason,
-      detail: detail.trim() || null,
-    })
-    if (error) console.error('신고 접수 실패:', error)
-    /* 접수 여부와 무관하게 같은 문구를 보여줍니다 — 신고했다는 사실이 화면에 오래 남으면
-       옆 사람에게 보입니다. 실패는 콘솔로만 남깁니다 */
-    setReportFor(null); setReason(null); setDetail('')
-    setReportNote(t.reportDone)
+  function noteAndClose(note: string) {
+    setReportFor(null)
+    setReportNote(note)
     setTimeout(() => setReportNote(''), 4000)
   }
 
@@ -135,11 +97,12 @@ export default function Stage() {
         .from('rooms')
         .select('id, gate_no, capacity, title, title_ja, title_en, situation, situation_ja, situation_en')
         .eq('slug', slug).single()
-      if (roomError) {
-        console.error('방 조회 실패:', roomError)
+      if (roomError || !r) {
+        /* 없는 주소·네트워크 끊김. 여기서 안 잡으면 「…」 화면에 갇힙니다 */
+        if (!cancelled) setBlocked('missing')
         return
       }
-      if (!r || cancelled) return
+      if (cancelled) return
       setRoom(r)
 
       /* 브라우저는 participants 를 직접 쓰지 않습니다 — client_id 가 오가면 사칭이 됩니다.
@@ -154,7 +117,7 @@ export default function Stage() {
       })
       if (joinError) {
         /* 직접 주소로 들어와도 9번째는 못 들어옵니다 — 정원은 서버가 셉니다 (기획서 3.7) */
-        if (String(joinError.message).includes('gate_full')) { setFull(true); return }
+        if (String(joinError.message).includes('gate_full')) { setBlocked('full'); return }
         console.error('참가자 등록 실패:', joinError)
       }
       const pid = joined as string | null
@@ -235,10 +198,12 @@ export default function Stage() {
     (m) => m.layer === layer && !(m.participant_id && hidden.includes(m.participant_id))
   )
 
-  if (full) {
+  if (blocked) {
     return (
       <main style={{ width: '100%', maxWidth: 480, margin: '0 auto', padding: 24 }}>
-        <p style={{ fontSize: 15, margin: '40px 0 20px', textAlign: 'center' }}>{t.full}</p>
+        <p style={{ fontSize: 15, margin: '40px 0 20px', textAlign: 'center' }}>
+          {blocked === 'full' ? t.full : t.notFound}
+        </p>
         <button onClick={() => router.push('/lounge')} style={{ ...ctaBtn, width: '100%' }}>
           {t.back}
         </button>
@@ -248,12 +213,8 @@ export default function Stage() {
 
   if (!room) return <main style={{ padding: 24 }}>...</main>
 
-  /* 절대 규칙 ④ — 비어 있으면 한국어로 떨어집니다 */
-  const roomTitle =
-    (lang === 'ja' ? room.title_ja : lang === 'en' ? room.title_en : room.title) || room.title
-  const roomSituation =
-    (lang === 'ja' ? room.situation_ja : lang === 'en' ? room.situation_en : room.situation) ||
-    room.situation
+  const roomTitle = field(room, 'title', lang)
+  const roomSituation = field(room, 'situation', lang)
 
   return (
     <main style={{ width: '100%', maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
@@ -383,7 +344,7 @@ export default function Stage() {
 
               {menuFor === m.participant_id && !mine && (
                 <div style={menuStyle}>
-                  <button onClick={() => hidePerson(m.participant_id!)} style={menuItemStyle}>{t.hide}</button>
+                  <button onClick={() => { hide(m.participant_id!); setMenuFor(null) }} style={menuItemStyle}>{t.hide}</button>
                   <button onClick={() => { setMenuFor(null); setReportFor(m) }} style={menuItemStyle}>{t.report}</button>
                 </div>
               )}
@@ -393,43 +354,16 @@ export default function Stage() {
         <div ref={bottomRef} />
       </div>
 
-      {reportFor && (
-        <div style={sheetWrapStyle} role="dialog" aria-modal="true">
-          <div style={sheetStyle}>
-            <b style={{ fontSize: 15 }}>{t.reportTitle}</b>
-            {/* 빨간 경고문 대신 담백하게. 그리고 직접 항의하지 말라고 안내합니다 (19.1) */}
-            <p style={{ fontSize: 12, color: 'var(--color-text-sub)', margin: '6px 0 12px', lineHeight: 1.6 }}>
-              {t.reportLead}
-            </p>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-              {REASONS.map((r) => (
-                <button key={r} onClick={() => setReason(r)} style={tab(reason === r)}>
-                  {(t as unknown as Record<string, string>)['r_' + r]}
-                </button>
-              ))}
-            </div>
-
-            {/* 스크린샷을 요구하지 않습니다 — 접수율이 급락합니다 (19.3) */}
-            <textarea
-              value={detail}
-              onChange={(e) => setDetail(e.target.value)}
-              placeholder={t.reportDetail}
-              maxLength={500}
-              rows={3}
-              style={textareaStyle}
-            />
-
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button onClick={() => { setReportFor(null); setReason(null); setDetail('') }}
-                      style={{ ...ctaGhost, flex: 1, fontSize: 14 }}>{t.close}</button>
-              <button onClick={sendReport} disabled={!reason}
-                      style={{ ...ctaBtn, flex: 1, fontSize: 14, opacity: reason ? 1 : 0.5 }}>
-                {t.reportSubmit}
-              </button>
-            </div>
-          </div>
-        </div>
+      {reportFor && room && (
+        <ReportSheet
+          lang={lang}
+          roomId={room.id}
+          messageId={reportFor.id}
+          reporterId={participantId}
+          targetId={reportFor.participant_id}
+          onClose={() => setReportFor(null)}
+          onDone={noteAndClose}
+        />
       )}
 
       <div style={{ display: 'flex', gap: 8, padding: 12, background: 'var(--color-surface)' }}>
@@ -506,20 +440,6 @@ const hiddenBarStyle: CSSProperties = {
 const reportNoteStyle: CSSProperties = {
   margin: 0, padding: '8px 16px', background: 'var(--color-primary-tint)',
   fontSize: 12.5, color: 'var(--color-text)',
-}
-const sheetWrapStyle: CSSProperties = {
-  position: 'fixed', inset: 0, background: 'rgba(43,34,38,.35)',
-  display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 20,
-}
-const sheetStyle: CSSProperties = {
-  width: '100%', maxWidth: 480, background: 'var(--color-surface)',
-  borderRadius: '20px 20px 0 0', padding: 20,
-  maxHeight: '80dvh', overflowY: 'auto',
-}
-const textareaStyle: CSSProperties = {
-  width: '100%', padding: 12, fontSize: 14, lineHeight: 1.6,
-  borderRadius: 'var(--radius-card)', border: `1px solid ${LINE}`,
-  background: 'var(--color-bg)', resize: 'none',
 }
 
 const tabBarStyle: CSSProperties = {

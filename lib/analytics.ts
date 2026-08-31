@@ -12,8 +12,10 @@
       새 이름을 만들면 GA4 맞춤 측정기준을 그만큼 더 등록해야 합니다.
    ───────────────────────────────────────────────────────── */
 
+import { KEYS } from '@/lib/storage'
+
 export const GA_ID = 'G-570M25BWKE'
-const QA_KEY = 'layover.qa'
+const QA_KEY = KEYS.qa
 
 /* ?qa=1 로 한 번 들어오면 이 브라우저는 계속 internal 로 찍힙니다 (해제는 ?qa=0).
    테스트 쪽에서 넘어올 때도 주소에 qa=1 을 들려 보냅니다 — 도메인이 달라
