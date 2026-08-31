@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { COLOR_KEYS, type ColorKey } from '@/lib/colors'
 import { getClientId } from '@/lib/client-id'
@@ -300,9 +301,13 @@ export default function CheerRoom() {
         {/* 멤놀방이 뭔지 모르는 사람이 있어서 한 줄 설명을 답니다 */}
         <p style={{ fontSize: 13, color: 'var(--color-text-sub)', margin: '6px 0 0' }}>{t.notifyLead}</p>
         <p style={{ fontSize: 13, color: 'var(--color-text-sub)', margin: '4px 0 14px' }}>{t.notifyBody}</p>
-        <a href={INSTAGRAM} target="_blank" rel="noopener noreferrer" style={ctaBtn}
+        {/* 「초대합니다」라고 했으면 들어가는 문이 같은 자리에 있어야 합니다.
+            그리고 라운지로 가는 버튼이 팔로우보다 위입니다 (기획서 4.15) */}
+        <Link href="/lounge" style={ctaBtn}
+              onClick={() => track('bridge_click', { to: 'lounge', lang })}>{t.notifyEnter}</Link>
+        {/* 팔로우는 보조입니다 — 주 버튼이 둘이면 아무것도 안 눌립니다 */}
+        <a href={INSTAGRAM} target="_blank" rel="noopener noreferrer" style={{ ...ctaGhost, marginTop: 8 }}
            onClick={() => track('notify_signup', { via: 'instagram', lang })}>{t.notifyButton}</a>
-        {/* 유튜브는 보조입니다 — 주 버튼이 둘이면 아무것도 안 눌립니다 */}
         <a href={YOUTUBE} target="_blank" rel="noopener noreferrer" style={{ ...ctaGhost, marginTop: 8 }}
            onClick={() => track('notify_signup', { via: 'youtube', lang })}>{t.notifyYoutube}</a>
       </section>
