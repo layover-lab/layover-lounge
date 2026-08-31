@@ -10,6 +10,7 @@ import { loadMe } from '@/lib/me'
 import LangToggle from '@/components/LangToggle'
 import ReportSheet from '@/components/ReportSheet'
 import { LINE, dot, tab, ctaBtn, linkBtn } from '@/lib/ui'
+import { track } from '@/lib/analytics'
 type Member = { id: string; name: string; role: string | null; color_key: string }
 
 /* 같은 방 안의 두 층 (기획서 5.4). 방을 옮기는 게 아니라 탭이 바뀌는 것입니다 */
@@ -67,6 +68,9 @@ export default function Stage() {
   const [reportFor, setReportFor] = useState<Msg | null>(null)
   const [reportNote, setReportNote] = useState('')
 
+  /* 첨삭을 요청한 내 문장들. 답은 백스테이지 대화로 오므로 화면 표시는 이걸로 충분합니다 */
+  const [asked, setAsked] = useState<string[]>([])
+
   const loadMembers = useCallback(async (roomId: string) => {
     const { data } = await supabase
       .from('participants')
@@ -75,6 +79,20 @@ export default function Stage() {
       .order('joined_at')
     setMembers((data as Member[]) ?? [])
   }, [])
+
+  /* 무대에서 빨간 줄을 긋지 않습니다 — 요청한 문장만 받습니다 (기획서 5.4 · 15.9) */
+  async function askFix(m: Msg) {
+    if (!room || !participantId) return
+    setAsked((prev) => [...prev, m.id])          /* 눌린 티가 바로 나야 합니다 */
+    const { error } = await supabase.from('corrections').insert({
+      room_id: room.id,
+      message_id: m.id,
+      requester_id: participantId,
+      body: m.body,                               /* 메시지가 지워져도 원문은 남습니다 */
+    })
+    if (error) console.error('첨삭 요청 실패:', error)
+    track('correction_requested', { lang })
+  }
 
   function noteAndClose(note: string) {
     setReportFor(null)
@@ -213,6 +231,10 @@ export default function Stage() {
 
   if (!room) return <main style={{ padding: 24 }}>...</main>
 
+  /* 버튼은 **내가 방금 보낸 한 문장에만** 붙입니다.
+     모든 말풍선에 달면 롤플레이 화면이 학습 도구처럼 보이고, ⋯ 안에 숨기면 아무도 못 찾습니다 */
+  const lastMine = [...shown].reverse().find((m) => m.participant_id === participantId)
+
   const roomTitle = field(room, 'title', lang)
   const roomSituation = field(room, 'situation', lang)
 
@@ -342,6 +364,14 @@ export default function Stage() {
               </div>
               <div style={bubbleFor(layer, mine)}>{m.body}</div>
 
+              {lastMine?.id === m.id && (
+                asked.includes(m.id) ? (
+                  <span style={fixDoneStyle}>✏️ {t.fixAsked} · {t.fixNote}</span>
+                ) : (
+                  <button onClick={() => askFix(m)} style={fixStyle}>✏️ {t.fixThis}</button>
+                )
+              )}
+
               {menuFor === m.participant_id && !mine && (
                 <div style={menuStyle}>
                   <button onClick={() => { hide(m.participant_id!); setMenuFor(null) }} style={menuItemStyle}>{t.hide}</button>
@@ -419,6 +449,14 @@ const bubbleStyle: CSSProperties = {
    무대는 깅엄·핑크, 백스테이지는 무지·회청색입니다 (기획서 5.4).
    색이 바뀌면 「지금 캐릭터가 아니라 나로 말하는 중」이 설명 없이 읽힙니다 */
 const BACKSTAGE_BG = '#F1F4F8'
+
+/* 말풍선 아래 작은 링크. 주 동작(대화)과 경쟁하면 안 됩니다 */
+const fixStyle: CSSProperties = {
+  ...linkBtn, marginTop: 5, fontSize: 11.5,
+}
+const fixDoneStyle: CSSProperties = {
+  marginTop: 5, fontSize: 11.5, color: 'var(--color-text-sub)',
+}
 
 const moreStyle: CSSProperties = {
   background: 'none', border: 'none', cursor: 'pointer',
