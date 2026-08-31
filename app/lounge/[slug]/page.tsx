@@ -7,6 +7,7 @@ import { dict, field } from '@/lib/i18n'
 import { useLang } from '@/lib/use-lang'
 import { useHidden } from '@/lib/use-hidden'
 import { loadMe } from '@/lib/me'
+import { KEYS, readJson, writeJson } from '@/lib/storage'
 import LangToggle from '@/components/LangToggle'
 import ReportSheet from '@/components/ReportSheet'
 import { LINE, dot, tab, ctaBtn, linkBtn } from '@/lib/ui'
@@ -71,6 +72,11 @@ export default function Stage() {
   /* 첨삭을 요청한 내 문장들. 답은 백스테이지 대화로 오므로 화면 표시는 이걸로 충분합니다 */
   const [asked, setAsked] = useState<string[]>([])
 
+  /* 백스테이지를 마지막으로 본 시각 (방별).
+     로그인이 없어서 푸시도 메일도 못 씁니다 — 다시 들어왔을 때 점으로 알리는 게 최선입니다.
+     첨삭 답변만이 아니라 백스테이지 대화 전체에 필요합니다 */
+  const [seenAt, setSeenAt] = useState<string | null>(null)
+
   const loadMembers = useCallback(async (roomId: string) => {
     const { data } = await supabase
       .from('participants')
@@ -122,6 +128,7 @@ export default function Stage() {
       }
       if (cancelled) return
       setRoom(r)
+      setSeenAt(readJson<Record<string, string>>(KEYS.seen, {})[r.id] ?? null)
 
       /* 브라우저는 participants 를 직접 쓰지 않습니다 — client_id 가 오가면 사칭이 됩니다.
          등록·갱신은 서버 함수 하나로 (20260831140000_join_room_rpc.sql) */
@@ -181,6 +188,15 @@ export default function Stage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, layer])
 
+  /* 백스테이지를 보고 있는 동안에는 계속 「봤음」으로 갱신합니다 */
+  useEffect(() => {
+    if (layer !== 'backstage' || !room) return
+    const now = new Date().toISOString()
+    setSeenAt(now)
+    const all = readJson<Record<string, string>>(KEYS.seen, {})
+    writeJson(KEYS.seen, { ...all, [room.id]: now })
+  }, [layer, room, messages])
+
   async function send(raw?: string) {
     const body = (raw ?? text).trim()
     if (!body || !room || !participantId) return
@@ -234,6 +250,16 @@ export default function Stage() {
   /* 버튼은 **내가 방금 보낸 한 문장에만** 붙입니다.
      모든 말풍선에 달면 롤플레이 화면이 학습 도구처럼 보이고, ⋯ 안에 숨기면 아무도 못 찾습니다 */
   const lastMine = [...shown].reverse().find((m) => m.participant_id === participantId)
+
+  /* 내가 쓴 글로 점이 뜨면 이상합니다 — 남이 쓴 것만 셉니다 */
+  const backstageNew =
+    layer !== 'backstage' &&
+    messages.some(
+      (m) =>
+        m.layer === 'backstage' &&
+        m.participant_id !== participantId &&
+        (!seenAt || m.created_at > seenAt)
+    )
 
   const roomTitle = field(room, 'title', lang)
   const roomSituation = field(room, 'situation', lang)
@@ -296,6 +322,7 @@ export default function Stage() {
         {(['stage', 'backstage'] as const).map((l) => (
           <button key={l} onClick={() => setLayer(l)} aria-pressed={layer === l} style={tab(layer === l)}>
             {l === 'stage' ? t.tabStage : t.tabBackstage}
+            {l === 'backstage' && backstageNew && <i aria-hidden style={newDotStyle} />}
           </button>
         ))}
       </div>
@@ -449,6 +476,12 @@ const bubbleStyle: CSSProperties = {
    무대는 깅엄·핑크, 백스테이지는 무지·회청색입니다 (기획서 5.4).
    색이 바뀌면 「지금 캐릭터가 아니라 나로 말하는 중」이 설명 없이 읽힙니다 */
 const BACKSTAGE_BG = '#F1F4F8'
+
+/* 안 본 백스테이지 글이 있다는 표시. 숫자를 세지 않습니다 — 몇 개인지보다 있는지가 중요합니다 */
+const newDotStyle: CSSProperties = {
+  display: 'inline-block', width: 6, height: 6, borderRadius: 999,
+  background: 'var(--color-primary-strong)', marginLeft: 5, verticalAlign: 'middle',
+}
 
 /* 말풍선 아래 작은 링크. 주 동작(대화)과 경쟁하면 안 됩니다 */
 const fixStyle: CSSProperties = {
