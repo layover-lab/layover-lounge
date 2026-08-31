@@ -138,6 +138,16 @@ export default function DressroomPage() {
      한 언어를 빠뜨려도 화면이 비지 않게 */
   const name = (i: Item) =>
     (lang === 'ja' ? i.nameJa : lang === 'en' ? i.nameEn : i.nameKo) || i.nameKo
+
+  /* 한국어를 배우는 사람이 주 타깃입니다 (기획서 15.9).
+     UI 전체를 두 언어로 만들면 버튼이 터지지만, **한국어 단어가 실제로 들어 있는 곳은
+     아이템 이름과 색 이름뿐**이라 여기만 병기하면 화면이 안 망가집니다.
+
+     색은 뜻을 따로 안 알려줘도 됩니다 — 카드 위 선이 그 색이라 「노랑」이 저절로 읽힙니다 */
+  const koColors = dict('ko').colors as Record<string, string>
+  const subName = (i: Item) =>
+    [lang !== 'ko' ? i.nameKo : null, i.colorKey ? koColors[i.colorKey] : null]
+      .filter(Boolean).join(' · ')
   const tabName = (c: Category) =>
     ({ dress: t.tabDress, blouse: t.tabBlouse, head: t.tabHead, accessory: t.tabAccessory }[c])
 
@@ -199,6 +209,9 @@ export default function DressroomPage() {
       {cat === 'accessory' && (
         <p style={{ fontSize: 12, color: 'var(--color-text-sub)', margin: '0 0 10px' }}>{t.colorNote}</p>
       )}
+      {t.koreanNote && (
+        <p style={{ fontSize: 12, color: 'var(--color-text-sub)', margin: '0 0 10px' }}>{t.koreanNote}</p>
+      )}
 
       {/* ── 아이템 ── */}
       <div style={grid}>
@@ -209,6 +222,7 @@ export default function DressroomPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`${ITEM_IMAGE_DIR}/${i.code}${ITEM_IMAGE_EXT}`} alt="" style={thumb} />
               <span style={{ fontSize: 11.5, lineHeight: 1.35, wordBreak: 'keep-all' }}>{name(i)}</span>
+              {subName(i) && <span style={subStyle}>{subName(i)}</span>}
             </button>
           )
         })}
@@ -240,6 +254,12 @@ const thumb: CSSProperties = {
   width: '100%', aspectRatio: '1', objectFit: 'contain', background: 'var(--color-surface-sub)',
   borderRadius: 10, marginBottom: 6,
 }
+/* 주 언어보다 작고 흐리게 — 읽고 싶은 사람만 읽으면 됩니다 */
+const subStyle: CSSProperties = {
+  display: 'block', marginTop: 3, fontSize: 10.5, lineHeight: 1.3,
+  color: 'var(--color-text-sub)', wordBreak: 'keep-all',
+}
+
 function card(on: boolean, i: Item): CSSProperties {
   /* border 축약형과 borderTop 을 같이 쓰면 리렌더 때 서로 덮어씁니다 — 네 변을 따로 씁니다 */
   const line = on ? '2px solid var(--color-text)' : `1px solid ${LINE}`
