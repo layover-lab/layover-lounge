@@ -6,7 +6,10 @@
     "roleToggle": "I'll play a different role",
     "rolePlaceholder": "instructor",
     "submit": "Start",
-    "realPersonWarning": "Please don't use a real person's name or nickname"
+    "realPersonWarning": "Please don't use a real person's name or nickname",
+    "situations": "Where are you headed today?",
+    "needName": "Pick a name first",
+    "joining": "Finding you a seat…"
   },
   "room": {
     "placeholder": "Write a message",
@@ -36,6 +39,8 @@
     "reportSubmit": "Send",
     "reportDone": "Got it. We'll take a look 🌷",
     "close": "Close",
+    "full": "This gate is full",
+    "gate": "Gate {n}",
     "r_harassment": "Harassment",
     "r_abuse": "Abusive language",
     "r_sexual": "Sexual harassment",

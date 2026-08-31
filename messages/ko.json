@@ -6,7 +6,10 @@
     "roleToggle": "다른 역할 할래요",
     "rolePlaceholder": "교관",
     "submit": "시작하기",
-    "realPersonWarning": "실존 인물의 이름이나 애칭은 쓸 수 없어요"
+    "realPersonWarning": "실존 인물의 이름이나 애칭은 쓸 수 없어요",
+    "situations": "오늘 어디로 갈래요?",
+    "needName": "이름을 먼저 정해주세요",
+    "joining": "자리 찾는 중…"
   },
   "room": {
     "placeholder": "메시지 입력",
@@ -36,6 +39,8 @@
     "reportSubmit": "보내기",
     "reportDone": "접수됐어요. 확인하고 처리할게요 🌷",
     "close": "닫기",
+    "full": "이 게이트는 만석이에요",
+    "gate": "{n}번 게이트",
     "r_harassment": "괴롭힘",
     "r_abuse": "욕설",
     "r_sexual": "성희롱",

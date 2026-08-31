@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import { COLOR_KEYS, type ColorKey } from '@/lib/colors'
 import { getClientId } from '@/lib/client-id'
 import { dict } from '@/lib/i18n'
@@ -9,6 +10,22 @@ import { useLang } from '@/lib/use-lang'
 import { loadMe, saveMe } from '@/lib/me'
 import LangToggle from '@/components/LangToggle'
 import RoomNav from '@/components/RoomNav'
+import { LINE } from '@/lib/ui'
+import type { Mode } from '@/lib/i18n'
+
+/* 상황 하나 = 게이트 여러 개. 목록에는 1번 게이트만 뜹니다 */
+type Situation = {
+  situation_key: string
+  title: string; title_ja: string | null; title_en: string | null
+  situation: string | null; situation_ja: string | null; situation_en: string | null
+}
+
+/* 절대 규칙 ④ — DB 에 저장하는 이름도 언어별로. 비어 있으면 한국어로 떨어집니다 */
+function text(s: Situation, base: 'title' | 'situation', lang: Mode): string {
+  if (lang === 'ja') return s[`${base}_ja`] || s[base] || ''
+  if (lang === 'en') return s[`${base}_en`] || s[base] || ''
+  return s[base] || ''
+}
 
 export default function LoungeEntry() {
   const router = useRouter()
@@ -16,6 +33,12 @@ export default function LoungeEntry() {
   const [name, setName] = useState('')
   const [role, setRole] = useState('')
   const [openRole, setOpenRole] = useState(false)
+
+  /* 상황 목록 — 운영자가 정한 것만 보여줍니다. 사용자가 방을 만들지 않습니다 (기획서 3.6).
+     같은 상황의 게이트가 여러 개라도 목록에는 1번 게이트 한 줄만 나옵니다 */
+  const [situations, setSituations] = useState<Situation[]>([])
+  const [busy, setBusy] = useState('')
+  const [note, setNote] = useState('')
   const [lang, setLang] = useLang()
   const t = dict(lang).entry
   const colorNames = dict(lang).colors as Record<string, string>
@@ -40,10 +63,20 @@ export default function LoungeEntry() {
     if (from) {
       try { localStorage.setItem('layover.from', from) } catch {}
     }
+
+    supabase
+      .from('rooms')
+      .select('situation_key, title, title_ja, title_en, situation, situation_ja, situation_en')
+      .eq('world', 'idol').eq('gate_no', 1).eq('is_official', true)
+      .order('situation_key')
+      .then(({ data }) => setSituations((data as Situation[]) ?? []))
   }, [])
 
-  function start() {
-    if (!name.trim()) return
+  async function start(situationKey: string) {
+    if (!name.trim()) { setNote(t.needName); return }
+    setNote('')
+    setBusy(situationKey)
+
     saveMe({
       clientId: getClientId(),
       colorKey,
@@ -51,7 +84,22 @@ export default function LoungeEntry() {
       role: role.trim(),
       avatar: 'preset-01',
     })
-    router.push('/lounge/japan-trip')
+
+    /* 방을 고르는 게 아니라 **상황**을 고릅니다. 자리 있는 게이트를 서버가 찾아주고,
+       다 찼으면 다음 게이트를 엽니다 (기획서 3.7) */
+    const { data: slug, error } = await supabase.rpc('join_gate', {
+      p_situation: situationKey,
+      p_client_id: getClientId(),
+      p_name: name.trim(),
+      p_color_key: colorKey,
+      p_role: role.trim() || null,
+    })
+    if (error || !slug) {
+      console.error('게이트 배정 실패:', error)
+      setBusy('')
+      return
+    }
+    router.push('/lounge/' + slug)
   }
 
   return (
@@ -115,27 +163,31 @@ export default function LoungeEntry() {
         {t.realPersonWarning}
       </p>
 
-      <button
-        onClick={start}
-        disabled={!name.trim()}
-        style={{
-          width: '100%',
-          padding: 14,
-          borderRadius: 'var(--radius-full)',
-          border: 'none',
-          background: name.trim() ? 'var(--color-primary)' : 'var(--color-neutral)',
-          color: 'var(--color-text)',
-          fontSize: 15,
-          fontWeight: 600,
-          cursor: name.trim() ? 'pointer' : 'default',
-        }}
-      >
-        {t.submit}
-      </button>
+      <h2 style={{ fontSize: 16, fontWeight: 700, margin: '4px 0 10px' }}>{t.situations}</h2>
+      {note && <p style={{ fontSize: 12.5, color: 'var(--color-primary-strong)', margin: '0 0 10px' }}>{note}</p>}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {situations.map((s) => (
+          <button key={s.situation_key} onClick={() => start(s.situation_key)}
+                  disabled={!!busy} style={cardStyle}>
+            <b style={{ fontSize: 15 }}>{text(s, 'title', lang)}</b>
+            <span style={{ fontSize: 12.5, color: 'var(--color-text-sub)' }}>
+              {busy === s.situation_key ? t.joining : text(s, 'situation', lang)}
+            </span>
+          </button>
+        ))}
+      </div>
 
       <RoomNav lang={lang} here="lounge" />
     </main>
   )
+}
+
+const cardStyle: CSSProperties = {
+  display: 'flex', flexDirection: 'column', gap: 4, textAlign: 'left',
+  padding: '14px 16px', borderRadius: 'var(--radius-card)',
+  background: 'var(--color-surface)', border: `1px solid ${LINE}`,
+  color: 'var(--color-text)', cursor: 'pointer',
 }
 
 const inputStyle: CSSProperties = {

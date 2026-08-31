@@ -44,7 +44,13 @@ const SELECT = 'id, layer, body, client_msg_id, created_at, participant_id, part
 export default function Stage() {
   const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
-  const [room, setRoom] = useState<{ id: string; title: string; situation: string | null; capacity: number | null } | null>(null)
+  type Room = {
+    id: string; gate_no: number | null; capacity: number | null
+    title: string; title_ja: string | null; title_en: string | null
+    situation: string | null; situation_ja: string | null; situation_en: string | null
+  }
+  const [room, setRoom] = useState<Room | null>(null)
+  const [full, setFull] = useState(false)
   const [participantId, setParticipantId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Msg[]>([])
   /* 무대와 백스테이지는 같은 방입니다 — 메시지를 한 번에 받아두고 보여줄 때 가릅니다.
@@ -126,7 +132,9 @@ export default function Stage() {
       }
 
       const { data: r, error: roomError } = await supabase
-        .from('rooms').select('id, title, situation, capacity').eq('slug', slug).single()
+        .from('rooms')
+        .select('id, gate_no, capacity, title, title_ja, title_en, situation, situation_ja, situation_en')
+        .eq('slug', slug).single()
       if (roomError) {
         console.error('방 조회 실패:', roomError)
         return
@@ -144,7 +152,11 @@ export default function Stage() {
         p_role: me.role || null,
         p_avatar: me.avatar,
       })
-      if (joinError) console.error('참가자 등록 실패:', joinError)
+      if (joinError) {
+        /* 직접 주소로 들어와도 9번째는 못 들어옵니다 — 정원은 서버가 셉니다 (기획서 3.7) */
+        if (String(joinError.message).includes('gate_full')) { setFull(true); return }
+        console.error('참가자 등록 실패:', joinError)
+      }
       const pid = joined as string | null
       if (cancelled) return
       setParticipantId(pid ?? null)
@@ -223,7 +235,25 @@ export default function Stage() {
     (m) => m.layer === layer && !(m.participant_id && hidden.includes(m.participant_id))
   )
 
+  if (full) {
+    return (
+      <main style={{ width: '100%', maxWidth: 480, margin: '0 auto', padding: 24 }}>
+        <p style={{ fontSize: 15, margin: '40px 0 20px', textAlign: 'center' }}>{t.full}</p>
+        <button onClick={() => router.push('/lounge')} style={{ ...ctaBtn, width: '100%' }}>
+          {t.back}
+        </button>
+      </main>
+    )
+  }
+
   if (!room) return <main style={{ padding: 24 }}>...</main>
+
+  /* 절대 규칙 ④ — 비어 있으면 한국어로 떨어집니다 */
+  const roomTitle =
+    (lang === 'ja' ? room.title_ja : lang === 'en' ? room.title_en : room.title) || room.title
+  const roomSituation =
+    (lang === 'ja' ? room.situation_ja : lang === 'en' ? room.situation_en : room.situation) ||
+    room.situation
 
   return (
     <main style={{ width: '100%', maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
@@ -235,7 +265,15 @@ export default function Stage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <div style={{ fontWeight: 700 }}>{room.title}</div>
+          <div style={{ fontWeight: 700 }}>
+            {roomTitle}
+            {/* 「1번 방」이 아니라 「1번 게이트」입니다 — 통과하면 다른 세계라는 걸 한 단어로 (3.7) */}
+            {room.gate_no && (
+              <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--color-text-sub)' }}>
+                {' · ' + t.gate.replace('{n}', String(room.gate_no))}
+              </span>
+            )}
+          </div>
           <button
             onClick={() => {
               const next = !showMembers
@@ -250,7 +288,7 @@ export default function Stage() {
         </div>
 
         <div style={{ fontSize: 12, color: 'var(--color-text-sub)', marginTop: 4 }}>
-          📌 {room.situation}
+          📌 {roomSituation}
         </div>
 
         {showMembers && (

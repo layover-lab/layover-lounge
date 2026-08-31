@@ -6,7 +6,10 @@
     "roleToggle": "ちがう役をやりたい",
     "rolePlaceholder": "教官",
     "submit": "はじめる",
-    "realPersonWarning": "実在の人物の名前やあだ名は使えません"
+    "realPersonWarning": "実在の人物の名前やあだ名は使えません",
+    "situations": "きょうは どこに行きますか?",
+    "needName": "先に名前を決めてください",
+    "joining": "席をさがしています…"
   },
   "room": {
     "placeholder": "メッセージを入力",
@@ -36,6 +39,8 @@
     "reportSubmit": "送る",
     "reportDone": "受けつけました。確認して対応します 🌷",
     "close": "とじる",
+    "full": "このゲートは満席です",
+    "gate": "{n}番ゲート",
     "r_harassment": "いやがらせ",
     "r_abuse": "暴言",
     "r_sexual": "セクハラ",
