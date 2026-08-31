@@ -110,6 +110,12 @@
     "random": "랜덤 코디",
     "reset": "처음부터",
     "nothingOn": "아직 아무것도 안 입었어요",
-    "colorNote": "소품이 색을 냅니다"
+    "colorNote": "소품이 색을 냅니다",
+    "wishTitle": "이런 옷도 입고 싶어요",
+    "wishPlaceholder": "어떤 옷이 있으면 좋겠어요?",
+    "wishSend": "보내기",
+    "wishDone": "고마워요! 잘 봤어요 🌷",
+    "wishNotice": "멤버 이름은 쓰지 말아주세요",
+    "wishTooFast": "잠깐만요, 조금 뒤에 다시 보낼 수 있어요"
   }
 }

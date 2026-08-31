@@ -110,6 +110,12 @@
     "random": "Surprise me",
     "reset": "Start over",
     "nothingOn": "Nothing on yet",
-    "colorNote": "The accessories carry the colours"
+    "colorNote": "The accessories carry the colours",
+    "wishTitle": "I'd wear this too",
+    "wishPlaceholder": "What would you like to see?",
+    "wishSend": "Send",
+    "wishDone": "Thank you! We've got it 🌷",
+    "wishNotice": "Please don't write member names",
+    "wishTooFast": "One moment — you can send another in a bit"
   }
 }

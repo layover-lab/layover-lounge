@@ -110,6 +110,12 @@
     "random": "ランダムコーデ",
     "reset": "さいしょから",
     "nothingOn": "まだ何も着ていません",
-    "colorNote": "色はこものが担当します"
+    "colorNote": "色はこものが担当します",
+    "wishTitle": "こんな服も着てみたい",
+    "wishPlaceholder": "どんな服があったらいいですか?",
+    "wishSend": "送る",
+    "wishDone": "ありがとうございます! 見ました 🌷",
+    "wishNotice": "メンバーの名前は書かないでください",
+    "wishTooFast": "少しあとで もういちど送れます"
   }
 }
