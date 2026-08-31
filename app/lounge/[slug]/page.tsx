@@ -8,6 +8,7 @@ import { useLang } from '@/lib/use-lang'
 import { useHidden } from '@/lib/use-hidden'
 import { loadMe } from '@/lib/me'
 import { KEYS, readJson, writeJson } from '@/lib/storage'
+import { ERR, isErr } from '@/lib/errors'
 import LangToggle from '@/components/LangToggle'
 import ReportSheet from '@/components/ReportSheet'
 import { LINE, dot, tab, ctaBtn, linkBtn } from '@/lib/ui'
@@ -69,7 +70,8 @@ export default function Stage() {
   const [reportFor, setReportFor] = useState<Msg | null>(null)
   const [reportNote, setReportNote] = useState('')
 
-  /* 첨삭을 요청한 내 문장들. 답은 백스테이지 대화로 오므로 화면 표시는 이걸로 충분합니다 */
+  /* 첨삭을 요청한 내 문장들. 새로고침해도 남아야 합니다 —
+     안 그러면 다시 「고쳐주세요」로 보여서 또 누르게 됩니다 */
   const [asked, setAsked] = useState<string[]>([])
 
   /* 백스테이지를 마지막으로 본 시각 (방별).
@@ -90,13 +92,26 @@ export default function Stage() {
   async function askFix(m: Msg) {
     if (!room || !participantId) return
     setAsked((prev) => [...prev, m.id])          /* 눌린 티가 바로 나야 합니다 */
+
     const { error } = await supabase.from('corrections').insert({
       room_id: room.id,
       message_id: m.id,
       requester_id: participantId,
       body: m.body,                               /* 메시지가 지워져도 원문은 남습니다 */
     })
-    if (error) console.error('첨삭 요청 실패:', error)
+
+    /* 이미 넣은 문장이면 성공으로 봅니다 (같은 문장을 두 번 눌렀을 뿐) */
+    if (error && !isErr(error, ERR.duplicate)) {
+      /* ⚠️ 신고와 다릅니다. 신고는 실패해도 같은 문구를 보여줍니다 — 티가 나면 안 되니까요.
+         첨삭은 **답을 기다리는** 기능이라 실패를 숨기면 오지 않는 답을 기다리게 됩니다 */
+      setAsked((prev) => prev.filter((id) => id !== m.id))
+      setReportNote(t.fixFailed)
+      setTimeout(() => setReportNote(''), 4000)
+      console.error('첨삭 요청 실패:', error)
+      return
+    }
+
+    writeJson(KEYS.asked, Array.from(new Set([...readJson<string[]>(KEYS.asked, []), m.id])))
     track('correction_requested', { lang })
   }
 
@@ -105,6 +120,8 @@ export default function Stage() {
     setReportNote(note)
     setTimeout(() => setReportNote(''), 4000)
   }
+
+  useEffect(() => { setAsked(readJson<string[]>(KEYS.asked, [])) }, [])
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null
@@ -142,7 +159,7 @@ export default function Stage() {
       })
       if (joinError) {
         /* 직접 주소로 들어와도 9번째는 못 들어옵니다 — 정원은 서버가 셉니다 (기획서 3.7) */
-        if (String(joinError.message).includes('gate_full')) { setBlocked('full'); return }
+        if (isErr(joinError, ERR.gateFull)) { setBlocked('full'); return }
         console.error('참가자 등록 실패:', joinError)
       }
       const pid = joined as string | null

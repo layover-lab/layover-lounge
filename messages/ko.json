@@ -43,6 +43,7 @@
     "fixThis": "고쳐주세요",
     "fixAsked": "요청했어요",
     "fixNote": "백스테이지로 답을 드릴게요",
+    "fixFailed": "요청이 안 갔어요. 잠시 뒤에 다시 눌러주세요",
     "r_harassment": "괴롭힘",
     "r_abuse": "욕설",
     "r_sexual": "성희롱",
@@ -116,6 +117,7 @@
     "wishSend": "보내기",
     "wishDone": "고마워요! 잘 봤어요 🌷",
     "wishNotice": "멤버 이름은 쓰지 말아주세요",
-    "wishTooFast": "잠깐만요, 조금 뒤에 다시 보낼 수 있어요"
+    "wishTooFast": "잠깐만요, 조금 뒤에 다시 보낼 수 있어요",
+    "wishFailed": "문제가 생겼어요. 잠시 뒤에 다시 해주세요"
   }
 }

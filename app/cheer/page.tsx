@@ -12,6 +12,7 @@ import LangToggle from '@/components/LangToggle'
 import RoomNav from '@/components/RoomNav'
 import { LINE, wrap, box, ctaBtn, ctaGhost, linkBtn, dot } from '@/lib/ui'
 import { track } from '@/lib/analytics'
+import { ERR, isErr } from '@/lib/errors'
 
 /* ─────────────────────────────────────────────────────────
    응원방 (기획서 5.14)
@@ -175,7 +176,7 @@ export default function CheerRoom() {
     /* 서버 쪽 도배 방지에 걸리면 입력을 지우지 않습니다 — 쓴 걸 잃으면 안 됩니다 */
     if (error) {
       console.error('응원 저장 실패:', error)
-      setNote(error.message?.includes('too_many') ? t.tooMany : t.cooldown)
+      setNote(isErr(error, ERR.cheerTooMany) ? t.tooMany : t.cooldown)
       setBusy(false)
       return
     }

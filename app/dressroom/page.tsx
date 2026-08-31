@@ -10,6 +10,7 @@ import { getClientId } from '@/lib/client-id'
 import { dict, type Mode } from '@/lib/i18n'
 import { useLang } from '@/lib/use-lang'
 import { track } from '@/lib/analytics'
+import { ERR, isErr } from '@/lib/errors'
 import LangToggle from '@/components/LangToggle'
 import RoomNav from '@/components/RoomNav'
 import { LINE, wrap, ctaBtn, ctaGhost, dot, tab } from '@/lib/ui'
@@ -137,7 +138,7 @@ export default function DressroomPage() {
     setWishBusy(false)
     if (error) {
       /* 도배 방지에 걸린 것. 쓴 걸 지우지 않습니다 */
-      setWishNote(String(error.message).includes('wish_too') ? t.wishTooFast : t.copyFailed)
+      setWishNote(isErr(error, ERR.wishTooFast, ERR.wishTooMany) ? t.wishTooFast : t.wishFailed)
       return
     }
     setWish('')
@@ -172,7 +173,7 @@ export default function DressroomPage() {
   /* 「이 소품이 무슨 색 담당인지」는 학습이 아니라 정보입니다 —
      보는 사람의 언어로 보여줍니다 */
   const colorNames = dict(lang).colors as Record<string, string>
-  const subName = (i: Item) => (i.colorKey ? colorNames[i.colorKey] : '')
+  const colorName = (i: Item) => (i.colorKey ? colorNames[i.colorKey] : '')
   const tabName = (c: Category) =>
     ({ dress: t.tabDress, blouse: t.tabBlouse, head: t.tabHead, accessory: t.tabAccessory }[c])
 
@@ -244,7 +245,7 @@ export default function DressroomPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`${ITEM_IMAGE_DIR}/${i.code}${ITEM_IMAGE_EXT}`} alt="" style={thumb} />
               <span style={{ fontSize: 11.5, lineHeight: 1.35, wordBreak: 'keep-all' }}>{name(i)}</span>
-              {subName(i) && <span style={subStyle}>{subName(i)}</span>}
+              {colorName(i) && <span style={subStyle}>{colorName(i)}</span>}
             </button>
           )
         })}

@@ -43,6 +43,7 @@
     "fixThis": "Fix my Korean",
     "fixAsked": "Asked",
     "fixNote": "We'll reply in Backstage",
+    "fixFailed": "Couldn't send. Please try again in a moment",
     "r_harassment": "Harassment",
     "r_abuse": "Abusive language",
     "r_sexual": "Sexual harassment",
@@ -116,6 +117,7 @@
     "wishSend": "Send",
     "wishDone": "Thank you! We've got it 🌷",
     "wishNotice": "Please don't write member names",
-    "wishTooFast": "One moment — you can send another in a bit"
+    "wishTooFast": "One moment — you can send another in a bit",
+    "wishFailed": "Something went wrong. Please try again in a moment"
   }
 }
