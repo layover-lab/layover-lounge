@@ -13,7 +13,6 @@ export const KEYS = {
   lang: 'layover.lang',      // 언어 (lib/i18n.ts)
   qa: 'layover.qa',          // 내부 트래픽 표시 (lib/analytics.ts)
   hidden: 'layover.hidden',  // 숨긴 사람 (lib/use-hidden.ts)
-  study: 'layover.study',    // 한국어 같이 보기 (lib/use-study.ts)
   from: 'layover.from',      // 어느 테스트에서 왔나
   client: 'layover.clientId', // 익명 식별자 (lib/client-id.ts). **바꾸면 모두의 참가 이력이 끊깁니다**
 } as const

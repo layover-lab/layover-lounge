@@ -88,9 +88,6 @@
     "sentOk": "Left it! It's up above 🌷",
     "sendAnother": "Leave one for another colour"
   },
-  "common": {
-    "study": "Show Korean too"
-  },
   "nav": {
     "lounge": "Roleplay rooms",
     "cheer": "Cheer room",
@@ -110,7 +107,6 @@
     "random": "Surprise me",
     "reset": "Start over",
     "nothingOn": "Nothing on yet",
-    "colorNote": "The accessories carry the colours",
-    "koreanNote": "The small line is the Korean name 🇰🇷"
+    "colorNote": "The accessories carry the colours"
   }
 }

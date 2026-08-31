@@ -9,8 +9,6 @@ import { dict, type Mode } from '@/lib/i18n'
 import { useLang } from '@/lib/use-lang'
 import { track } from '@/lib/analytics'
 import LangToggle from '@/components/LangToggle'
-import StudyToggle from '@/components/StudyToggle'
-import { useStudy } from '@/lib/use-study'
 import RoomNav from '@/components/RoomNav'
 import { LINE, wrap, ctaBtn, ctaGhost, dot, tab } from '@/lib/ui'
 
@@ -57,7 +55,6 @@ function toLook(worn: Worn): string {
 
 export default function DressroomPage() {
   const [lang, setLang] = useLang((picked) => onFirstOpen(picked))
-  const { study, toggle: toggleStudy } = useStudy()
   const t = dict(lang).dressroom
 
   const [worn, setWorn] = useState<Worn>(DEFAULT_LOOK)
@@ -142,18 +139,10 @@ export default function DressroomPage() {
   const name = (i: Item) =>
     (lang === 'ja' ? i.nameJa : lang === 'en' ? i.nameEn : i.nameKo) || i.nameKo
 
-  /* 「한국어 같이 보기」를 켠 사람에게만 붙습니다 (기획서 15.9).
-     UI 전체를 두 언어로 만들면 버튼이 터지지만, **한국어 단어가 실제로 들어 있는 곳은
-     아이템 이름과 색 이름뿐**이라 여기만 병기하면 화면이 안 망가집니다.
-
-     색은 뜻을 따로 안 알려줘도 됩니다 — 카드 위 선이 그 색이라 「노랑」이 저절로 읽힙니다.
-     한국어 화면에서는 색 이름만 남습니다. 그건 학습이 아니라 그냥 정보입니다 */
-  const koColors = dict('ko').colors as Record<string, string>
-  const showKo = study && lang !== 'ko'
-  const subName = (i: Item) =>
-    [showKo ? i.nameKo : null,
-     (showKo || lang === 'ko') && i.colorKey ? koColors[i.colorKey] : null]
-      .filter(Boolean).join(' · ')
+  /* 「이 소품이 무슨 색 담당인지」는 학습이 아니라 정보입니다 —
+     보는 사람의 언어로 보여줍니다 */
+  const colorNames = dict(lang).colors as Record<string, string>
+  const subName = (i: Item) => (i.colorKey ? colorNames[i.colorKey] : '')
   const tabName = (c: Category) =>
     ({ dress: t.tabDress, blouse: t.tabBlouse, head: t.tabHead, accessory: t.tabAccessory }[c])
 
@@ -162,8 +151,7 @@ export default function DressroomPage() {
 
   return (
     <main style={wrap}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-        <StudyToggle lang={lang} study={study} onToggle={toggleStudy} />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
         <LangToggle lang={lang} onChange={setLang} />
       </div>
 
@@ -215,9 +203,6 @@ export default function DressroomPage() {
 
       {cat === 'accessory' && (
         <p style={{ fontSize: 12, color: 'var(--color-text-sub)', margin: '0 0 10px' }}>{t.colorNote}</p>
-      )}
-      {showKo && t.koreanNote && (
-        <p style={{ fontSize: 12, color: 'var(--color-text-sub)', margin: '0 0 10px' }}>{t.koreanNote}</p>
       )}
 
       {/* ── 아이템 ── */}
