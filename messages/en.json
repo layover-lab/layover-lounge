@@ -88,6 +88,9 @@
     "sentOk": "Left it! It's up above 🌷",
     "sendAnother": "Leave one for another colour"
   },
+  "common": {
+    "study": "Show Korean too"
+  },
   "nav": {
     "lounge": "Roleplay rooms",
     "cheer": "Cheer room",

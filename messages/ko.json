@@ -88,6 +88,9 @@
     "sentOk": "남겼어요! 위에 올라와 있어요 🌷",
     "sendAnother": "다른 색에도 남기기"
   },
+  "common": {
+    "study": "한국어 같이 보기"
+  },
   "nav": {
     "lounge": "멤놀방",
     "cheer": "응원방",
