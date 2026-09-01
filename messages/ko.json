@@ -1,10 +1,10 @@
 {
   "entry": {
     "title": "오늘 누구 할래?",
-    "nameLabel": "이름",
-    "namePlaceholder": "애기귤",
-    "roleToggle": "다른 역할 할래요",
-    "rolePlaceholder": "교관",
+    "nameLabel": "닉네임",
+    "namePlaceholder": "",
+    "roleToggle": "직업이 뭐예요?",
+    "rolePlaceholder": "아이돌, 작가, 교관, 경찰 등",
     "realPersonWarning": "실존 인물의 이름이나 애칭은 쓸 수 없어요",
     "situations": "오늘 어디로 갈래요?",
     "needName": "이름을 먼저 정해주세요",

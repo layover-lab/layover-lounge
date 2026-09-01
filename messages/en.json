@@ -1,10 +1,10 @@
 {
   "entry": {
     "title": "Who are you today?",
-    "nameLabel": "Name",
-    "namePlaceholder": "your nickname",
-    "roleToggle": "I'll play a different role",
-    "rolePlaceholder": "instructor",
+    "nameLabel": "Nickname",
+    "namePlaceholder": "",
+    "roleToggle": "What's your job?",
+    "rolePlaceholder": "idol, writer, instructor, police…",
     "realPersonWarning": "Please don't use a real person's name or nickname",
     "situations": "Where are you headed today?",
     "needName": "Pick a name first",

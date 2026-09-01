@@ -1,10 +1,10 @@
 {
   "entry": {
     "title": "きょうは だれになる?",
-    "nameLabel": "なまえ",
-    "namePlaceholder": "みかん",
-    "roleToggle": "ちがう役をやりたい",
-    "rolePlaceholder": "教官",
+    "nameLabel": "ニックネーム",
+    "namePlaceholder": "",
+    "roleToggle": "おしごとは なに?",
+    "rolePlaceholder": "アイドル、作家、教官、警察 など",
     "realPersonWarning": "実在の人物の名前やあだ名は使えません",
     "situations": "きょうは どこに行きますか?",
     "needName": "先に名前を決めてください",
