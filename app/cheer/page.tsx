@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { COLOR_KEYS, type ColorKey } from '@/lib/colors'
@@ -31,18 +31,31 @@ const COOLDOWN_MS = 10_000
 type Row = {
   id: string
   body: string
+  /* 저장형 번역 (부록 B Q18). 아직 안 붙은 글은 body_lang 이 null 입니다 */
+  body_ko: string | null
+  body_ja: string | null
+  body_lang: string | null
   created_at: string
   room_id: string
   participants: { name: string; color_key: string } | null
 }
 
-const SELECT = 'id, body, created_at, room_id, participants(name, color_key)'
+const SELECT =
+  'id, body, body_ko, body_ja, body_lang, created_at, room_id, participants(name, color_key)'
+
+/* 보는 사람의 언어로 읽을 것을 고릅니다. 원문이 이미 그 언어면 아무것도 안 붙입니다 —
+   같은 말이 두 번 적혀 있으면 화면만 길어집니다.
+
+   ⚠️ 영어 화면에는 안 붙습니다. 한국어·일본어 두 벌만 저장하기 때문입니다 (5.1.1 —
+      이 기능의 목적이 「한국어를 배우는 일본인의 읽기 연습」이라서요) */
+function reading(r: Row, lang: Mode): string | null {
+  if (!r.body_lang) return null
+  if (lang === 'ko') return r.body_lang === 'ko' ? null : r.body_ko
+  if (lang === 'ja') return r.body_lang === 'ja' ? null : r.body_ja
+  return null
+}
 
 export default function CheerRoom() {
-  const [lang, setLang] = useLang((picked) => onFirstOpen(picked))
-  const t = dict(lang).cheer
-  const colorNames = dict(lang).colors as Record<string, string>
-
   const [rooms, setRooms] = useState<Record<ColorKey, string>>({} as Record<ColorKey, string>)
   const [rows, setRows] = useState<Row[]>([])
   /* 색깔별 개수 — 화면은 최근 50개만 불러와서, 로드된 것으로 세면 51개째부터 틀어집니다 */
@@ -118,6 +131,13 @@ export default function CheerRoom() {
     loadRooms().then(loadRows)
     loadCounts()
   }
+
+  /* ⚠️ `useLang` 은 **`onFirstOpen` 아래**에 둡니다. 위로 올리면 아직 만들어지지 않은
+     상태·함수를 가리키게 됩니다 (함수 선언이 끌어올려져서 돌아가기는 하지만,
+     리액트 컴파일러가 그 컴포넌트의 최적화를 포기합니다) */
+  const [lang, setLang] = useLang((picked) => onFirstOpen(picked))
+  const t = dict(lang).cheer
+  const colorNames = dict(lang).colors as Record<string, string>
 
   const colorOf = (roomId: string) =>
     (Object.keys(rooms) as ColorKey[]).find((k) => rooms[k] === roomId) ?? 'pink'
@@ -195,6 +215,12 @@ export default function CheerRoom() {
     track('cheer_sent', { result: target, lang })
     await loadRows(rooms)
     await loadCounts()
+
+    /* 번역은 **기다리지 않습니다.** 내 응원이 화면에 뜨는 게 먼저고, 번역은 1~2초 뒤
+       한 번 더 불러오면서 붙습니다. 번역기가 죽어 있어도 응원은 그대로 남습니다 */
+    fetch('/api/translate', { method: 'POST' })
+      .then(() => loadRows(rooms))
+      .catch(() => {})
   }
 
   return (
@@ -250,6 +276,13 @@ export default function CheerRoom() {
               {colorNames[colorOf(r.room_id)]}
             </div>
             <div style={{ fontSize: 15, whiteSpace: 'pre-wrap' }}>{r.body}</div>
+            {/* 남이 쓴 한국어 아래에 일본어 뜻이 붙으면 그대로 읽기 연습이 됩니다 (5.1.1) */}
+            {reading(r, lang) && (
+              <div style={transStyle}>
+                <span style={transLabel}>{t.translated}</span>
+                {reading(r, lang)}
+              </div>
+            )}
           </article>
         ))}
       </section>
@@ -327,6 +360,16 @@ export default function CheerRoom() {
 /* 이 화면에서만 쓰는 조각들. 공통은 lib/ui.ts 에 있습니다 */
 const item: CSSProperties = {
   borderLeft: '3px solid', paddingLeft: 12, marginBottom: 16,
+}
+/* 원문보다 작고 흐리게 — 원문이 주인공이고 번역은 거드는 자리입니다 */
+const transStyle: CSSProperties = {
+  marginTop: 4, fontSize: 13, lineHeight: 1.5,
+  color: 'var(--color-text-sub)', whiteSpace: 'pre-wrap',
+}
+const transLabel: CSSProperties = {
+  fontSize: 10.5, padding: '1px 6px', marginRight: 6,
+  borderRadius: 'var(--radius-full)', background: 'var(--color-neutral)',
+  verticalAlign: '1px',
 }
 const emptyStyle: CSSProperties = {
   fontSize: 13, color: 'var(--color-text-sub)', textAlign: 'center', padding: '28px 0',
