@@ -12,6 +12,7 @@ import { ERR, isErr } from '@/lib/errors'
 import LangToggle from '@/components/LangToggle'
 import ReportSheet from '@/components/ReportSheet'
 import { LINE, dot, tab, ctaBtn, linkBtn } from '@/lib/ui'
+import { useAfterMount } from '@/lib/use-after-mount'
 import { track } from '@/lib/analytics'
 type Member = { id: string; name: string; role: string | null; color_key: string }
 
@@ -76,7 +77,10 @@ export default function Stage() {
 
   /* 백스테이지를 마지막으로 본 시각 (방별).
      로그인이 없어서 푸시도 메일도 못 씁니다 — 다시 들어왔을 때 점으로 알리는 게 최선입니다.
-     첨삭 답변만이 아니라 백스테이지 대화 전체에 필요합니다 */
+     첨삭 답변만이 아니라 백스테이지 대화 전체에 필요합니다.
+
+     보고 있는 **동안에는** 이 값이 화면에 쓰이지 않습니다 — 점은 무대 탭에만 뜨니까요.
+     그래서 상태는 백스테이지를 **떠날 때** 한 번만 바꾸고, 저장소만 계속 갱신합니다 */
   const [seenAt, setSeenAt] = useState<string | null>(null)
 
   const loadMembers = useCallback(async (roomId: string) => {
@@ -121,7 +125,7 @@ export default function Stage() {
     setTimeout(() => setReportNote(''), 4000)
   }
 
-  useEffect(() => { setAsked(readJson<string[]>(KEYS.asked, [])) }, [])
+  useAfterMount(() => setAsked(readJson<string[]>(KEYS.asked, [])))
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null
@@ -213,13 +217,13 @@ export default function Stage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, layer])
 
-  /* 백스테이지를 보고 있는 동안에는 계속 「봤음」으로 갱신합니다 */
+  /* 백스테이지를 보고 있는 동안에는 계속 「봤음」으로 저장해 둡니다.
+     **저장소만 건드립니다** — 화면 상태는 탭을 떠날 때 한 번만 바꾸면 됩니다 (아래 탭 버튼).
+     effect 가 할 일은 원래 이런 것(바깥 세계와 맞추기)입니다 */
   useEffect(() => {
     if (layer !== 'backstage' || !room) return
-    const now = new Date().toISOString()
-    setSeenAt(now)
     const all = readJson<Record<string, string>>(KEYS.seen, {})
-    writeJson(KEYS.seen, { ...all, [room.id]: now })
+    writeJson(KEYS.seen, { ...all, [room.id]: new Date().toISOString() })
   }, [layer, room, messages])
 
   async function send(raw?: string) {
@@ -358,7 +362,16 @@ export default function Stage() {
       {/* 무대 · 백스테이지 — 같은 방의 두 층입니다 (기획서 5.4) */}
       <div style={tabBarStyle}>
         {(['stage', 'backstage'] as const).map((l) => (
-          <button key={l} onClick={() => setLayer(l)} aria-pressed={layer === l} style={tab(layer === l)}>
+          <button
+            key={l}
+            onClick={() => {
+              /* 백스테이지에서 나오는 순간 「여기까지 봤다」로 잠급니다 */
+              if (layer === 'backstage' && l !== 'backstage') setSeenAt(new Date().toISOString())
+              setLayer(l)
+            }}
+            aria-pressed={layer === l}
+            style={tab(layer === l)}
+          >
             {l === 'stage' ? t.tabStage : t.tabBackstage}
             {l === 'backstage' && backstageNew && <i aria-hidden style={newDotStyle} />}
           </button>

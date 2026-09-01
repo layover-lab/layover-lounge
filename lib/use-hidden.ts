@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { KEYS, readJson, writeJson } from '@/lib/storage'
+import { useAfterMount } from '@/lib/use-after-mount'
 
 /* ─────────────────────────────────────────────────────────
    숨긴 사람 (기획서 19.2 「숨기기」)
@@ -16,7 +17,7 @@ export function useHidden() {
   const [hidden, setHidden] = useState<string[]>([])
 
   /* 서버에서 미리 그린 화면과 맞춰야 해서 첫 렌더에는 비워두고 마운트 뒤에 읽습니다 */
-  useEffect(() => { setHidden(readJson<string[]>(KEYS.hidden, [])) }, [])
+  useAfterMount(() => setHidden(readJson<string[]>(KEYS.hidden, [])))
 
   function hide(participantId: string) {
     const next = Array.from(new Set([...hidden, participantId]))

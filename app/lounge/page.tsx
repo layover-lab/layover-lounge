@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { COLOR_KEYS, type ColorKey } from '@/lib/colors'
@@ -12,6 +12,7 @@ import { KEYS, writeText } from '@/lib/storage'
 import LangToggle from '@/components/LangToggle'
 import RoomNav from '@/components/RoomNav'
 import { LINE } from '@/lib/ui'
+import { useAfterMount } from '@/lib/use-after-mount'
 
 /* 상황 하나 = 게이트 여러 개. 목록에는 1번 게이트만 뜹니다 */
 type Situation = {
@@ -36,7 +37,7 @@ export default function LoungeEntry() {
   const t = dict(lang).entry
   const colorNames = dict(lang).colors as Record<string, string>
 
-  useEffect(() => {
+  useAfterMount(() => {
     const me = loadMe()
     if (me) {
       setColorKey((me.colorKey as ColorKey) ?? 'yellow')
@@ -63,7 +64,7 @@ export default function LoungeEntry() {
       .eq('world', 'idol').eq('gate_no', 1).eq('is_official', true)
       .order('situation_key')
       .then(({ data }) => setSituations((data as Situation[]) ?? []))
-  }, [])
+  })
 
   async function start(situationKey: string) {
     if (!name.trim()) { setNote(t.needName); return }

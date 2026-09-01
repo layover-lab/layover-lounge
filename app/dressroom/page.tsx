@@ -57,9 +57,6 @@ function toLook(worn: Worn): string {
 }
 
 export default function DressroomPage() {
-  const [lang, setLang] = useLang((picked) => onFirstOpen(picked))
-  const t = dict(lang).dressroom
-
   const [worn, setWorn] = useState<Worn>(DEFAULT_LOOK)
   const [cat, setCat] = useState<Category>('dress')
   const [note, setNote] = useState('')
@@ -81,6 +78,10 @@ export default function DressroomPage() {
       track('dressroom_view', { lang: picked })
     }
   }
+
+  /* ⚠️ `useLang` 은 **`onFirstOpen` 아래**에 둡니다 — 응원방과 같은 이유입니다 */
+  const [lang, setLang] = useLang((picked) => onFirstOpen(picked))
+  const t = dict(lang).dressroom
 
   /* 주소를 계속 최신 코디로 맞춥니다 — 새로고침해도, 주소를 복사해도 그대로 */
   const writeUrl = useCallback((next: Worn) => {
@@ -207,7 +208,7 @@ export default function DressroomPage() {
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {wornList.map((i) => (
-              <button key={i.code} onClick={() => takeOff(i.category)} style={chipWorn(i)}
+              <button key={i.code} onClick={() => takeOff(i.category)} style={chipWorn}
                       aria-label={`${name(i)} ${t.off}`}>
                 {i.colorKey && <i style={dot(i.colorKey)} />}
                 {name(i)} <span style={{ color: 'var(--color-text-sub)' }}>✕</span>
@@ -327,11 +328,9 @@ function card(on: boolean, i: Item): CSSProperties {
     borderRadius: 'var(--radius-card)', color: 'var(--color-text)',
   }
 }
-function chipWorn(i: Item): CSSProperties {
-  return {
-    display: 'inline-flex', alignItems: 'center', gap: 5,
-    padding: '5px 10px', borderRadius: 'var(--radius-full)',
-    background: 'var(--color-surface)', border: `1px solid ${LINE}`,
-    color: 'var(--color-text)', fontSize: 12, cursor: 'pointer',
-  }
+const chipWorn: CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 5,
+  padding: '5px 10px', borderRadius: 'var(--radius-full)',
+  background: 'var(--color-surface)', border: `1px solid ${LINE}`,
+  color: 'var(--color-text)', fontSize: 12, cursor: 'pointer',
 }

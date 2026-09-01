@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { pickLang, htmlLang, type Mode } from '@/lib/i18n'
+import { useAfterMount } from '@/lib/use-after-mount'
 
 /* ─────────────────────────────────────────────────────────
    화면마다 반복되던 언어 초기화를 한 곳에 모읍니다.
@@ -16,13 +17,12 @@ import { pickLang, htmlLang, type Mode } from '@/lib/i18n'
 export function useLang(onReady?: (mode: Mode) => void) {
   const [lang, setLang] = useState<Mode>('ja')
 
-  useEffect(() => {
+  useAfterMount(() => {
     const picked = pickLang()
     setLang(picked)
-    document.documentElement.lang = htmlLang(picked)   /* 공부 모드는 한국어로 잡습니다 */
+    document.documentElement.lang = htmlLang(picked)
     onReady?.(picked)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  })
 
   return [lang, setLang] as const
 }
