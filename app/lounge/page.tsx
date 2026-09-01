@@ -7,7 +7,7 @@ import { COLOR_KEYS, type ColorKey } from '@/lib/colors'
 import { getClientId } from '@/lib/client-id'
 import { dict, field } from '@/lib/i18n'
 import { useLang } from '@/lib/use-lang'
-import { loadMe, saveMe } from '@/lib/me'
+import { loadMe, patchMe } from '@/lib/me'
 import { KEYS, writeText } from '@/lib/storage'
 import LangToggle from '@/components/LangToggle'
 import RoomNav from '@/components/RoomNav'
@@ -70,12 +70,13 @@ export default function LoungeEntry() {
     setNote('')
     setBusy(situationKey)
 
-    saveMe({
+    /* 이 화면이 아는 것만 넘깁니다 — 아바타는 안 물어보므로 건드리지 않습니다.
+       역할은 비운 채로 시작할 수 있어야 해서 빈 값도 그대로 넘깁니다 */
+    patchMe({
       clientId: getClientId(),
       colorKey,
       name: name.trim(),
       role: role.trim(),
-      avatar: 'preset-01',
     })
 
     /* 방을 고르는 게 아니라 **상황**을 고릅니다. 자리 있는 게이트를 서버가 찾아주고,

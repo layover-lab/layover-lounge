@@ -7,7 +7,7 @@ import { COLOR_KEYS, type ColorKey } from '@/lib/colors'
 import { getClientId } from '@/lib/client-id'
 import { dict, type Mode } from '@/lib/i18n'
 import { useLang } from '@/lib/use-lang'
-import { loadMe, saveMe } from '@/lib/me'
+import { loadMe, patchMe } from '@/lib/me'
 import LangToggle from '@/components/LangToggle'
 import RoomNav from '@/components/RoomNav'
 import { LINE, wrap, box, ctaBtn, ctaGhost, linkBtn, dot } from '@/lib/ui'
@@ -156,8 +156,10 @@ export default function CheerRoom() {
     setNote('')
     const clientId = getClientId()
 
-    /* 이름·색을 기억해둡니다 — 라운지 입장 화면과 같은 칸을 씁니다 */
-    saveMe({ clientId, colorKey: myColor, name: name.trim(), role: '', avatar: 'preset-01' })
+    /* 이름·색을 기억해둡니다 — 라운지 입장 화면과 같은 칸을 씁니다.
+       이 화면은 역할·아바타를 안 물어보므로 그 둘은 넘기지 않습니다 —
+       넘기면 라운지에서 정한 역할이 빈 값으로 덮입니다 (lib/me.ts) */
+    patchMe({ clientId, colorKey: myColor, name: name.trim() })
 
     /* 채팅방과 같은 함수를 씁니다. client_id 는 브라우저에서 서버로만 가고 돌아오지 않습니다 */
     const { data: pid, error: joinError } = await supabase.rpc('join_room', {
