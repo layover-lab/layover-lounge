@@ -184,11 +184,19 @@ export default function Stage() {
               .from('messages').select(SELECT).eq('id', payload.new.id).single()
             if (!data) return
             const incoming = data as unknown as Msg
-            setMessages((prev) =>
-              prev.some((m) => m.client_msg_id && m.client_msg_id === incoming.client_msg_id)
-                ? prev
-                : [...prev, incoming]
-            )
+            setMessages((prev) => {
+              /* 내가 방금 낙관적으로 그려둔 그 문장이면 **진짜 행으로 갈아끼웁니다.**
+                 그냥 두면 화면은 맞게 보이지만 id 가 브라우저에서 만든 값 그대로라,
+                 그 id 로 첨삭을 넣는 순간 DB 에 없는 메시지라며 거절당합니다
+                 (corrections.message_id 가 messages 를 참조합니다) */
+              const i = prev.findIndex(
+                (m) => m.client_msg_id && m.client_msg_id === incoming.client_msg_id
+              )
+              if (i === -1) return [...prev, incoming]
+              const next = [...prev]
+              next[i] = incoming
+              return next
+            })
           }
         )
         .subscribe()
