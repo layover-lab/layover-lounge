@@ -170,9 +170,13 @@ export default function CheerRoom() {
     })
     if (joinError || !pid) { console.error('참가자 등록 실패:', joinError); setBusy(false); return }
 
-    const { error } = await supabase.from('messages').insert({
-      room_id: roomId, layer: 'stage', participant_id: pid,
-      body, client_msg_id: crypto.randomUUID(),
+    /* 멤놀방과 같은 함수를 씁니다 — participant_id 는 서버가 client_id 로 찾습니다 */
+    const { error } = await supabase.rpc('send_message', {
+      p_room_id: roomId,
+      p_client_id: clientId,
+      p_layer: 'stage',
+      p_body: body,
+      p_client_msg_id: crypto.randomUUID(),
     })
 
     /* 서버 쪽 도배 방지에 걸리면 입력을 지우지 않습니다 — 쓴 걸 잃으면 안 됩니다 */

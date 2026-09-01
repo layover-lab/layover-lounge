@@ -242,14 +242,27 @@ export default function Stage() {
       },
     ])
 
-    const { error } = await supabase.from('messages').insert({
-      room_id: room.id,
-      layer,
-      participant_id: participantId,
-      body,
-      client_msg_id: clientMsgId,
+    /* participant_id 를 넘기지 않습니다 — 이 방에서의 내 id 는 서버가 client_id 로 찾습니다.
+       브라우저가 지목할 수 있으면 남의 이름·색으로 글을 넣을 수 있습니다
+       (20260901120000_send_message_rpc.sql) */
+    const { data: saved, error } = await supabase.rpc('send_message', {
+      p_room_id: room.id,
+      p_client_id: me.clientId,
+      p_layer: layer,
+      p_body: body,
+      p_client_msg_id: clientMsgId,
     })
-    if (error) console.error('메시지 전송 실패:', error)
+    if (error) {
+      console.error('메시지 전송 실패:', error)
+      return
+    }
+    /* 돌아온 진짜 id 로 곧바로 갈아끼웁니다. Realtime 도 같은 일을 하지만,
+       그쪽이 늦거나 끊긴 사이에 「고쳐주세요」를 누르면 없는 id 로 첨삭이 거절됩니다 */
+    if (saved) {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === clientMsgId ? { ...m, id: saved as string } : m))
+      )
+    }
   }
 
   /* 두 층을 한 번에 받아두고 여기서 가릅니다. 숨긴 사람도 여기서 빠집니다 */
