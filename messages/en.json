@@ -73,7 +73,8 @@
     "r_scam": "Scam or payment bait",
     "r_other": "Something else",
     "starterLead": "Want to start like this?",
-    "slowLive": "Connection is slow. New messages may take a moment"
+    "liveBusy": "The lounge is busy right now. New messages may take a moment 🥲 Sorry, we're on a free server",
+    "liveOffline": "We can't reach you. Please check your connection"
   },
   "colors": {
     "yellow": "Yellow",

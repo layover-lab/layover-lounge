@@ -117,7 +117,13 @@ export default function Stage() {
      한도에 안 걸립니다. 못 하는 건 **남의 새 글을 바로 받는 것** 하나뿐이라,
      실시간이 안 붙으면 10초마다 가져오는 쪽으로 떨어집니다.
      조용히 멈추면 「아무도 말을 안 하네」로 읽고 나갑니다 */
-  const [live, setLive] = useState(true)
+  /* 'on' 실시간 정상 · 'busy' 실시간은 막혔지만 REST 는 됨 (서버가 붐빔)
+     · 'offline' 둘 다 안 됨 (이 사람 인터넷 문제)
+
+     ⚠️ 둘을 구분하지 않으면 「지금 라운지가 붐벼요」가 지하철에서도 뜹니다.
+        사실이 아닌 데다 **기대를 부풀립니다** — 사람 많대서 들어왔는데
+        방이 조용하면 두 번 실망합니다. REST 가 되는지로 가릅니다 */
+  const [live, setLive] = useState<'on' | 'busy' | 'offline'>('on')
   const messagesRef = useRef<Msg[]>([])
   const liveGuard = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [lang, setLang] = useLang()
@@ -287,13 +293,13 @@ export default function Stage() {
          supabase 가 조용히 재시도만 합니다. 그게 정확히 한도가 찼을 때의 모습이라
          「연결됐다는 말이 안 들리면 안 된 것으로」 봅니다.
          8초는 붙을 때 1초도 안 걸리는 것을 넉넉히 기다려 준 값입니다 */
-      liveGuard.current = setTimeout(() => { if (!cancelled) setLive(false) }, 8000)
+      liveGuard.current = setTimeout(() => { if (!cancelled) setLive('busy') }, 8000)
 
       /* 확인용 스위치. 주소에 ?nolive=1 을 붙이면 실시간을 아예 안 붙이고
          가져오기로만 돕니다 — 한도가 찼을 때의 화면을 사람이 눈으로 볼 방법이
          달리 없습니다. 실제로 한도에 걸린 상태를 만들어 볼 수는 없으니까요 */
       if (/[?&]nolive=1/.test(window.location.search)) {
-        setLive(false)
+        setLive('busy')
         return
       }
 
@@ -314,15 +320,15 @@ export default function Stage() {
             if (cancelled) return
             if (status === 'SUBSCRIBED') {
               if (liveGuard.current) clearTimeout(liveGuard.current)
-              setLive(true)
+              setLive('on')
             } else {
-              setLive(false)
+              setLive('busy')
             }
           })
       } catch (e) {
         /* 소켓을 아예 못 여는 경우. 방은 이미 열려 있으니 폴링으로 갑니다 */
         console.error('실시간 연결 실패 — 가져오기로 바꿉니다:', e)
-        if (!cancelled) setLive(false)
+        if (!cancelled) setLive('busy')
       }
     }
 
@@ -370,15 +376,23 @@ export default function Stage() {
      마지막으로 받은 시각 뒤엣것만 가져옵니다. 통째로 다시 받으면 방이 길어질수록
      10초마다 그만큼을 계속 내려받게 됩니다 */
   useEffect(() => {
-    if (live || !room) return
-    const id = setInterval(async () => {
+    if (live === 'on' || !room) return
+    let stopped = false
+
+    async function tick() {
       const last = messagesRef.current.reduce((a, m) => (m.created_at > a ? m.created_at : a), '')
-      let q = supabase.from('messages').select(SELECT).eq('room_id', room.id).order('created_at')
+      let q = supabase.from('messages').select(SELECT).eq('room_id', room!.id).order('created_at')
       if (last) q = q.gt('created_at', last)
-      const { data } = await q
+      const { data, error } = await q
+      if (stopped) return
+      /* 가져오기까지 안 되면 서버가 붐비는 게 아니라 이 사람 인터넷이 끊긴 겁니다 */
+      setLive(error ? 'offline' : 'busy')
       if (data?.length) setMessages((prev) => merge(prev, data as unknown as Msg[]))
-    }, 10000)
-    return () => clearInterval(id)
+    }
+
+    tick()                                   /* 10초를 기다리지 않고 바로 한 번 */
+    const id = setInterval(tick, 10000)
+    return () => { stopped = true; clearInterval(id) }
   }, [live, room])
 
   useEffect(() => {
@@ -572,7 +586,9 @@ export default function Stage() {
         </div>
       )}
       {/* 아무 말 없이 멈춘 것보다 낫습니다. 대화는 계속 되지만 조금 늦게 뜹니다 */}
-      {!live && <p style={slowStyle}>{t.slowLive}</p>}
+      {live !== 'on' && (
+        <p style={slowStyle}>{live === 'offline' ? t.liveOffline : t.liveBusy}</p>
+      )}
       {note && <p style={noteStyle}>{note}</p>}
 
       {/* [새 메시지 ↓] 가 설 자리입니다. 스크롤되는 상자 **안**에 넣으면
