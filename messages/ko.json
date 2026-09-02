@@ -119,7 +119,7 @@
   },
   "dressroom": {
     "title": "드레스룸",
-    "lead": "눌러서 바로 입혀보세요. 가입 안 해도 돼요",
+    "lead": "내 아바타를 꾸며보세요",
     "tabDress": "드레스",
     "tabBlouse": "블라우스",
     "tabHead": "헤드",
@@ -136,7 +136,7 @@
     "wishPlaceholder": "어떤 옷이 있으면 좋겠어요?",
     "wishSend": "보내기",
     "wishDone": "고마워요! 잘 봤어요 🌷",
-    "wishNotice": "멤버 이름은 쓰지 말아주세요",
+    "wishNotice": "많은 분들이 원하신다면 반영해볼게요",
     "wishTooFast": "잠깐만요, 조금 뒤에 다시 보낼 수 있어요",
     "wishFailed": "문제가 생겼어요. 잠시 뒤에 다시 해주세요"
   }
