@@ -21,9 +21,16 @@ type Situation = {
   situation: string | null; situation_ja: string | null; situation_en: string | null
 }
 
+/* 상황별 인원 — situation_counts 뷰 (20260901160000).
+   「지금 접속 중」이 아니라 들어온 적 있는 사람입니다 */
+type CountRow = { situation_key: string; people: number; recent: number }
+type Counts = Record<string, CountRow>
+
 export default function LoungeEntry() {
   const router = useRouter()
-  const [colorKey, setColorKey] = useState<ColorKey>('yellow')
+  /* 기본값을 두지 않습니다. 노랑이 미리 골라져 있으면 아무 생각 없이 지나가는
+     사람이 전부 노랑이 되고, 그게 9장 수요 데이터의 첫 입력값을 오염시킵니다 */
+  const [colorKey, setColorKey] = useState<ColorKey | null>(null)
   const [name, setName] = useState('')
   const [role, setRole] = useState('')
   const [openRole, setOpenRole] = useState(false)
@@ -31,6 +38,7 @@ export default function LoungeEntry() {
   /* 상황 목록 — 운영자가 정한 것만 보여줍니다. 사용자가 방을 만들지 않습니다 (기획서 3.6).
      같은 상황의 게이트가 여러 개라도 목록에는 1번 게이트 한 줄만 나옵니다 */
   const [situations, setSituations] = useState<Situation[]>([])
+  const [counts, setCounts] = useState<Counts>({})
   const [busy, setBusy] = useState('')
   const [note, setNote] = useState('')
   const [lang, setLang] = useLang()
@@ -40,7 +48,7 @@ export default function LoungeEntry() {
   useAfterMount(() => {
     const me = loadMe()
     if (me) {
-      setColorKey((me.colorKey as ColorKey) ?? 'yellow')
+      setColorKey((me.colorKey as ColorKey) ?? null)
       setName(me.name ?? '')
       setRole(me.role ?? '')
       if (me.role) setOpenRole(true)
@@ -64,9 +72,22 @@ export default function LoungeEntry() {
       .eq('world', 'idol').eq('gate_no', 1).eq('is_official', true)
       .order('situation_key')
       .then(({ data }) => setSituations((data as Situation[]) ?? []))
+
+    /* 카드 다섯 개가 다 똑같이 생기면 어디로 가야 사람이 있는지 모릅니다.
+       ⚠️ 0 은 아예 안 그립니다 — 「0명」은 아무것도 없는 것보다 나쁩니다 (4.6) */
+    supabase
+      .from('situation_counts')
+      .select('situation_key, people, recent')
+      .then(({ data }) => {
+        const next: Counts = {}
+        for (const row of (data as CountRow[] | null) ?? []) next[row.situation_key] = row
+        setCounts(next)
+      })
   })
 
   async function start(situationKey: string) {
+    /* 화면에 놓인 순서대로 물어봅니다 — 색이 위, 이름이 아래 */
+    if (!colorKey) { setNote(t.needColor); return }
     if (!name.trim()) { setNote(t.needName); return }
     setNote('')
     setBusy(situationKey)
@@ -107,7 +128,12 @@ export default function LoungeEntry() {
 
       <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>{t.title}</h1>
 
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
+      {/* 4×2 로 고정합니다. flex-wrap 은 폭에 따라 6+2 로 깨지는데,
+          그러면 8색이 한 세트로 안 읽히고 아래 둘이 남은 것처럼 보입니다 */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
+        justifyItems: 'center', gap: 12, marginBottom: 20,
+      }}>
         {COLOR_KEYS.map((key) => (
           <button
             key={key}
@@ -162,15 +188,30 @@ export default function LoungeEntry() {
       {note && <p style={{ fontSize: 12.5, color: 'var(--color-primary-strong)', margin: '0 0 10px' }}>{note}</p>}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {situations.map((s) => (
-          <button key={s.situation_key} onClick={() => start(s.situation_key)}
-                  disabled={!!busy} style={cardStyle}>
-            <b style={{ fontSize: 15 }}>{field(s, 'title', lang)}</b>
-            <span style={{ fontSize: 12.5, color: 'var(--color-text-sub)' }}>
-              {busy === s.situation_key ? t.joining : field(s, 'situation', lang)}
-            </span>
-          </button>
-        ))}
+        {situations.map((s) => {
+          const c = counts[s.situation_key]
+          const played =
+            c?.recent  ? t.playedToday.replace('{n}', String(c.recent))
+          : c?.people  ? t.playedTotal.replace('{n}', String(c.people))
+          : ''
+          return (
+            <button key={s.situation_key} onClick={() => start(s.situation_key)}
+                    disabled={!!busy} style={cardStyle}>
+              <span style={rowStyle}>
+                <b style={{ fontSize: 15 }}>{field(s, 'title', lang)}</b>
+                {/* 이 카드가 곧 문입니다. 표시가 없으면 상황을 「고르는」 화면인 줄 알고
+                    입장 버튼을 찾다가 나갑니다 (기획서 5.7 — 3초 안에 입장) */}
+                <span style={enterStyle}>{t.enter} →</span>
+              </span>
+              <span style={{ fontSize: 12.5, color: 'var(--color-text-sub)' }}>
+                {busy === s.situation_key ? t.joining : field(s, 'situation', lang)}
+              </span>
+              {played && !busy && (
+                <span style={{ fontSize: 12, color: 'var(--color-primary-strong)' }}>{played}</span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       <RoomNav lang={lang} here="lounge" />
@@ -183,6 +224,15 @@ const cardStyle: CSSProperties = {
   padding: '14px 16px', borderRadius: 'var(--radius-card)',
   background: 'var(--color-surface)', border: `1px solid ${LINE}`,
   color: 'var(--color-text)', cursor: 'pointer',
+}
+
+const rowStyle: CSSProperties = {
+  display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8,
+}
+
+const enterStyle: CSSProperties = {
+  fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap',
+  color: 'var(--color-primary-strong)',
 }
 
 const inputStyle: CSSProperties = {

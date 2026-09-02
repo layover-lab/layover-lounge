@@ -2,13 +2,17 @@
   "entry": {
     "title": "きょうは だれになる?",
     "nameLabel": "ニックネーム",
-    "namePlaceholder": "",
+    "namePlaceholder": "もこ",
     "roleToggle": "どんな役?",
     "rolePlaceholder": "アイドル、作家、ファン、騎士、メイド など",
     "realPersonWarning": "実在の人物の名前やあだ名は使えません",
     "situations": "どんな場面?",
     "needName": "先に名前を決めてください",
-    "joining": "席をさがしています…"
+    "joining": "席をさがしています…",
+    "enter": "入る",
+    "needColor": "先に色を選んでください",
+    "playedToday": "きょうは {n}人が遊びました",
+    "playedTotal": "これまでに {n}人が遊びました"
   },
   "room": {
     "placeholder": "メッセージを入力",
@@ -96,7 +100,8 @@
   "nav": {
     "lounge": "キャラチャット",
     "cheer": "応援ルーム",
-    "dressroom": "ドレスルーム"
+    "dressroom": "ドレスルーム",
+    "soon": "準備中"
   },
   "dressroom": {
     "title": "ドレスルーム",

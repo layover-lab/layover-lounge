@@ -2,13 +2,17 @@
   "entry": {
     "title": "Who are you today?",
     "nameLabel": "Nickname",
-    "namePlaceholder": "",
+    "namePlaceholder": "Mochi",
     "roleToggle": "What's your role?",
     "rolePlaceholder": "idol, writer, fan, knight, maid, police…",
     "realPersonWarning": "Please don't use a real person's name or nickname",
     "situations": "What's the scene?",
     "needName": "Pick a name first",
-    "joining": "Finding you a seat…"
+    "joining": "Finding you a seat…",
+    "enter": "Enter",
+    "needColor": "Pick a colour first",
+    "playedToday": "{n} played today",
+    "playedTotal": "{n} have played so far"
   },
   "room": {
     "placeholder": "Write a message",
@@ -96,7 +100,8 @@
   "nav": {
     "lounge": "Roleplay rooms",
     "cheer": "Cheer room",
-    "dressroom": "Dressroom"
+    "dressroom": "Dressroom",
+    "soon": "Coming soon"
   },
   "dressroom": {
     "title": "Dressroom",
