@@ -1,5 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="768" height="1024" viewBox="0 0 768 1024" role="img" aria-label="hair-a-front placeholder">
   <!-- 임시 플레이스홀더. 진짜 그림이 오면 같은 이름의 .webp 로 교체됩니다 -->
   <path d="M282,196 Q384,86 486,196 Q446,142 384,142 Q322,142 282,196 Z" fill="#A0929A"/>
-  <text x="18" y="88" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="20" fill="#B3ABB0">hair-a-front</text>
 </svg>

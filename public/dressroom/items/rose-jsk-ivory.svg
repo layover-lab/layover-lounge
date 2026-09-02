@@ -2,5 +2,4 @@
   <!-- 임시 플레이스홀더. 진짜 그림이 오면 같은 이름의 .webp 로 교체됩니다 -->
   <rect x="300" y="418" width="168" height="120" rx="18" fill="#CFC7CC"/>
   <path d="M314,520 L164,780 Q384,860 604,780 L454,520 Z" fill="#CFC7CC"/>
-  <text x="18" y="196" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="20" fill="#B3ABB0">rose-jsk-ivory</text>
 </svg>
