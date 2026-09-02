@@ -12,7 +12,6 @@ import { ERR, isErr } from '@/lib/errors'
 import LangToggle from '@/components/LangToggle'
 import ReportSheet from '@/components/ReportSheet'
 import { LINE, dot, tab, ctaBtn, linkBtn } from '@/lib/ui'
-import { useAfterMount } from '@/lib/use-after-mount'
 import { useViewportHeight } from '@/lib/use-viewport-height'
 import { track } from '@/lib/analytics'
 type Member = { id: string; name: string; role: string | null; color_key: string }
@@ -23,6 +22,9 @@ type Layer = 'stage' | 'backstage'
 type Msg = {
   id: string
   layer: Layer
+  /* 'ask' 는 「이 표현 자연스러운가요?」입니다. body 에는 **물어본 문장만** 들어 있고,
+     질문 줄은 화면이 보는 사람 언어로 그립니다 (20260903000000_ask_messages.sql) */
+  kind: string | null
   body: string
   client_msg_id: string | null
   created_at: string
@@ -30,7 +32,7 @@ type Msg = {
   participants: { name: string; color_key: string; role: string | null } | null
 }
 
-const SELECT = 'id, layer, body, client_msg_id, created_at, participant_id, participants(name, color_key, role)'
+const SELECT = 'id, layer, kind, body, client_msg_id, created_at, participant_id, participants(name, color_key, role)'
 
 type Room = {
   id: string; gate_no: number | null; capacity: number | null
@@ -81,9 +83,13 @@ export default function Stage() {
   const [reportFor, setReportFor] = useState<Msg | null>(null)
   const [reportNote, setReportNote] = useState('')
 
-  /* 첨삭을 요청한 내 문장들. 새로고침해도 남아야 합니다 —
-     안 그러면 다시 「고쳐주세요」로 보여서 또 누르게 됩니다 */
-  const [asked, setAsked] = useState<string[]>([])
+  /* 무대에서 집어 온 문장. 백스테이지에 도착하면 보내기 전 카드로 떠 있습니다.
+
+     ⚠️ 무대의 링크는 **접수 버튼이 아니라 문**입니다. 눌러도 아무 데도 안 보내고
+        백스테이지로 데려가기만 합니다 — 학습은 사람으로 말하는 층의 일이니까요 (5.4).
+        그리고 문장을 안고 가야 합니다. 백스테이지에서 다시 옮겨 적으라고 하면
+        아무도 안 합니다 — 흐름이 거기서 끊깁니다 */
+  const [askDraft, setAskDraft] = useState<{ messageId: string; body: string } | null>(null)
 
   /* 백스테이지를 마지막으로 본 시각 (방별).
      로그인이 없어서 푸시도 메일도 못 씁니다 — 다시 들어왔을 때 점으로 알리는 게 최선입니다.
@@ -102,30 +108,33 @@ export default function Stage() {
     setMembers((data as Member[]) ?? [])
   }, [])
 
-  /* 무대에서 빨간 줄을 긋지 않습니다 — 요청한 문장만 받습니다 (기획서 5.4 · 15.9) */
-  async function askFix(m: Msg) {
-    if (!room || !participantId) return
-    setAsked((prev) => [...prev, m.id])          /* 눌린 티가 바로 나야 합니다 */
+  /* 물어보기 — 백스테이지에 **대화로** 올립니다. 답하는 쪽에는 아무 UI도 만들지 않습니다.
+     그냥 답장이면 되니까요 */
+  async function sendAsk() {
+    if (!askDraft || !room || !participantId) return
+    const draft = askDraft
+    setAskDraft(null)
 
-    const { error } = await supabase.from('corrections').insert({
-      room_id: room.id,
-      message_id: m.id,
-      requester_id: participantId,
-      body: m.body,                               /* 메시지가 지워져도 원문은 남습니다 */
-    })
-
-    /* 이미 넣은 문장이면 성공으로 봅니다 (같은 문장을 두 번 눌렀을 뿐) */
-    if (error && !isErr(error, ERR.duplicate)) {
-      /* ⚠️ 신고와 다릅니다. 신고는 실패해도 같은 문구를 보여줍니다 — 티가 나면 안 되니까요.
-         첨삭은 **답을 기다리는** 기능이라 실패를 숨기면 오지 않는 답을 기다리게 됩니다 */
-      setAsked((prev) => prev.filter((id) => id !== m.id))
-      setReportNote(t.fixFailed)
+    const ok = await send(draft.body, 'ask')
+    if (!ok) {
+      /* ⚠️ 조용히 실패하면 답을 기다리게 됩니다. 쓴 것도 돌려놓습니다 */
+      setAskDraft(draft)
+      setReportNote(t.askFailed)
       setTimeout(() => setReportNote(''), 4000)
-      console.error('첨삭 요청 실패:', error)
       return
     }
 
-    writeJson(KEYS.asked, Array.from(new Set([...readJson<string[]>(KEYS.asked, []), m.id])))
+    /* 대화와 **별개로** 한 줄 남깁니다 — 「누가 뭘 물었나」가 강좌(26장)의 커리큘럼이자
+       나중 AI 1차 첨삭의 재료입니다. 여기서 실패해도 사용자에게는 알리지 않습니다:
+       물어본 것은 이미 백스테이지에 올라가 있고, 답은 거기서 옵니다 */
+    const { error } = await supabase.from('corrections').insert({
+      room_id: room.id,
+      message_id: draft.messageId,
+      requester_id: participantId,
+      body: draft.body,
+    })
+    if (error && !isErr(error, ERR.duplicate)) console.error('첨삭 기록 실패:', error)
+
     track('correction_requested', { lang })
   }
 
@@ -134,8 +143,6 @@ export default function Stage() {
     setReportNote(note)
     setTimeout(() => setReportNote(''), 4000)
   }
-
-  useAfterMount(() => setAsked(readJson<string[]>(KEYS.asked, [])))
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null
@@ -256,9 +263,10 @@ export default function Stage() {
     writeJson(KEYS.seen, { ...all, [room.id]: new Date().toISOString() })
   }, [layer, room, messages])
 
-  async function send(raw?: string) {
+  /* 보냈는지를 돌려줍니다 — 물어보기는 실패하면 카드를 돌려놔야 합니다 */
+  async function send(raw?: string, kind: 'line' | 'ask' = 'line'): Promise<boolean> {
     const body = (raw ?? text).trim()
-    if (!body || !room || !participantId) return
+    if (!body || !room || !participantId) return false
     const clientMsgId = crypto.randomUUID()
     const me = loadMe()!
     if (raw === undefined) setText('')
@@ -270,6 +278,7 @@ export default function Stage() {
       {
         id: clientMsgId,
         layer,
+        kind,
         body,
         client_msg_id: clientMsgId,
         created_at: new Date().toISOString(),
@@ -287,10 +296,12 @@ export default function Stage() {
       p_layer: layer,
       p_body: body,
       p_client_msg_id: clientMsgId,
+      p_kind: kind,
     })
     if (error) {
       console.error('메시지 전송 실패:', error)
-      return
+      setMessages((prev) => prev.filter((m) => m.id !== clientMsgId))   /* 안 간 말풍선을 남기지 않습니다 */
+      return false
     }
     /* 돌아온 진짜 id 로 곧바로 갈아끼웁니다. Realtime 도 같은 일을 하지만,
        그쪽이 늦거나 끊긴 사이에 「고쳐주세요」를 누르면 없는 id 로 첨삭이 거절됩니다 */
@@ -299,6 +310,7 @@ export default function Stage() {
         prev.map((m) => (m.id === clientMsgId ? { ...m, id: saved as string } : m))
       )
     }
+    return true
   }
 
   /* 두 층을 한 번에 받아두고 여기서 가릅니다. 숨긴 사람도 여기서 빠집니다 */
@@ -491,14 +503,23 @@ export default function Stage() {
                   >⋯</button>
                 )}
               </div>
-              <div style={bubbleFor(layer, mine)}>{m.body}</div>
+              <div style={bubbleFor(layer, mine)}>
+                {m.kind === 'ask' ? (
+                  <>
+                    {/* 물어본 문장. 질문 줄은 **보는 사람 언어**로 그립니다 —
+                        일본어로 물어도 한국인 화면에는 한국어로 보여야 답이 옵니다 */}
+                    <span style={askQuoteStyle}>「{m.body}」</span>
+                    <span style={askLineStyle}>{t.askQ1}<br />{t.askQ2}</span>
+                  </>
+                ) : m.body}
+              </div>
 
-              {lastMine?.id === m.id && (
-                asked.includes(m.id) ? (
-                  <span style={fixDoneStyle}>✏️ {t.fixAsked} · {t.fixNote}</span>
-                ) : (
-                  <button onClick={() => askFix(m)} style={fixStyle}>✏️ {t.fixThis}</button>
-                )
+              {/* 무대에서 내가 방금 쓴 문장에만. **접수가 아니라 문입니다** */}
+              {layer === 'stage' && lastMine?.id === m.id && m.kind !== 'ask' && (
+                <button
+                  onClick={() => { setAskDraft({ messageId: m.id, body: m.body }); setLayer('backstage') }}
+                  style={askDoorStyle}
+                >💬 {t.askStage}</button>
               )}
 
               {menuFor === m.participant_id && !mine && (
@@ -528,6 +549,19 @@ export default function Stage() {
           onClose={() => setReportFor(null)}
           onDone={noteAndClose}
         />
+      )}
+
+      {/* 무대에서 집어 온 문장. 스크롤 영역 밖(입력창 바로 위)에 둡니다 —
+          대화가 길면 위로 밀려 올라가서 안 보입니다 */}
+      {layer === 'backstage' && askDraft && (
+        <div style={askCardStyle}>
+          <p style={{ ...askQuoteStyle, margin: '0 0 8px' }}>「{askDraft.body}」</p>
+          <p style={{ ...askLineStyle, margin: '0 0 12px' }}>{t.askQ1}<br />{t.askQ2}</p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={sendAsk} style={{ ...tplSendStyle, flex: 1 }}>{t.askSend}</button>
+            <button onClick={() => setAskDraft(null)} style={askCancelStyle}>{t.askCancel}</button>
+          </div>
+        </div>
       )}
 
       <div style={{ display: 'flex', gap: 8, padding: 12, background: 'var(--color-surface)' }}>
@@ -590,12 +624,30 @@ const newDotStyle: CSSProperties = {
   background: 'var(--color-primary-strong)', marginLeft: 5, verticalAlign: 'middle',
 }
 
-/* 말풍선 아래 작은 링크. 주 동작(대화)과 경쟁하면 안 됩니다 */
-const fixStyle: CSSProperties = {
-  ...linkBtn, marginTop: 5, fontSize: 11.5,
+/* 말풍선 아래 작은 링크. 주 동작(대화)과 경쟁하면 안 됩니다 —
+   여기가 커지면 롤플레이 화면이 학습 도구처럼 보입니다 (기획서 5.15) */
+const askDoorStyle: CSSProperties = {
+  ...linkBtn, marginTop: 5, fontSize: 11.5, textAlign: 'left',
 }
-const fixDoneStyle: CSSProperties = {
-  marginTop: 5, fontSize: 11.5, color: 'var(--color-text-sub)',
+
+/* 물어본 문장. 인용부호로 「내가 한 말」이 아니라 「내가 물어보는 대상」임을 보입니다 */
+const askQuoteStyle: CSSProperties = {
+  display: 'block', fontSize: 15, marginBottom: 6,
+}
+const askLineStyle: CSSProperties = {
+  display: 'block', fontSize: 13, lineHeight: 1.6, color: 'var(--color-text-sub)',
+}
+
+/* 보내기 전 확인 카드 — 백스테이지 색(무지·회청)을 씁니다 */
+const askCardStyle: CSSProperties = {
+  margin: '0 12px', padding: 14,
+  background: '#FFFFFF', border: '1px solid #DDE5EE',
+  borderRadius: 'var(--radius-card)',
+}
+const askCancelStyle: CSSProperties = {
+  flex: 'none', padding: '11px 16px', borderRadius: 'var(--radius-full)',
+  border: '1px solid #DDE5EE', background: 'var(--color-surface)',
+  color: 'var(--color-text-sub)', fontSize: 14, cursor: 'pointer',
 }
 
 const moreStyle: CSSProperties = {
