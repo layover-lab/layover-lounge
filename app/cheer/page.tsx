@@ -10,7 +10,7 @@ import { useLang } from '@/lib/use-lang'
 import { loadMe, patchMe } from '@/lib/me'
 import LangToggle from '@/components/LangToggle'
 import RoomNav from '@/components/RoomNav'
-import { LINE, wrap, box, ctaBtn, ctaGhost, linkBtn, dot } from '@/lib/ui'
+import { LINE, wrap, box, ctaBtn, linkBtn, dot } from '@/lib/ui'
 import { track } from '@/lib/analytics'
 import { ERR, isErr } from '@/lib/errors'
 
@@ -339,17 +339,24 @@ export default function CheerRoom() {
       <section style={{ ...box, textAlign: 'center', marginTop: 14 }}>
         <b style={{ fontSize: 15 }}>{t.notifyTitle}</b>
         {/* 멤놀방이 뭔지 모르는 사람이 있어서 한 줄 설명을 답니다 */}
-        <p style={{ fontSize: 13, color: 'var(--color-text-sub)', margin: '6px 0 0' }}>{t.notifyLead}</p>
-        <p style={{ fontSize: 13, color: 'var(--color-text-sub)', margin: '4px 0 14px' }}>{t.notifyBody}</p>
+        <p style={{ fontSize: 13, color: 'var(--color-text-sub)', margin: '6px 0 14px' }}>{t.notifyLead}</p>
         {/* 「초대합니다」라고 했으면 들어가는 문이 같은 자리에 있어야 합니다.
             그리고 라운지로 가는 버튼이 팔로우보다 위입니다 (기획서 4.15) */}
         <Link href="/lounge" style={ctaBtn}
               onClick={() => track('bridge_click', { to: 'lounge', lang })}>{t.notifyEnter}</Link>
-        {/* 팔로우는 보조입니다 — 주 버튼이 둘이면 아무것도 안 눌립니다 */}
-        <a href={INSTAGRAM} target="_blank" rel="noopener noreferrer" style={{ ...ctaGhost, marginTop: 8 }}
-           onClick={() => track('notify_signup', { via: 'instagram', lang })}>{t.notifyButton}</a>
-        <a href={YOUTUBE} target="_blank" rel="noopener noreferrer" style={{ ...ctaGhost, marginTop: 8 }}
-           onClick={() => track('notify_signup', { via: 'youtube', lang })}>{t.notifyYoutube}</a>
+        {/* 팔로우는 부탁이지 목적지가 아닙니다. 풀폭 버튼으로 두면 들어가기와
+            셋이 경쟁해서 아무것도 안 눌립니다 — 버튼에서 내려 한 줄로 답니다.
+            cutie-type 결과 카드와 같은 모양입니다 (같은 문구를 쓰는 자리라서) */}
+        <p style={followRow}>
+          {t.notifyBody}
+          <span style={followLinks}>
+            <a href={INSTAGRAM} target="_blank" rel="noopener noreferrer" style={followLink}
+               onClick={() => track('notify_signup', { via: 'instagram', lang })}>{t.notifyButton}</a>
+            <span aria-hidden="true" style={{ color: 'var(--color-text-sub)' }}>·</span>
+            <a href={YOUTUBE} target="_blank" rel="noopener noreferrer" style={followLink}
+               onClick={() => track('notify_signup', { via: 'youtube', lang })}>{t.notifyYoutube}</a>
+          </span>
+        </p>
       </section>
 
       <RoomNav lang={lang} here="cheer" />
@@ -358,6 +365,24 @@ export default function CheerRoom() {
 }
 
 /* 이 화면에서만 쓰는 조각들. 공통은 lib/ui.ts 에 있습니다 */
+
+/* 팔로우 부탁 — 카드에 채운 버튼은 「멤놀방 들어가기」 하나뿐입니다 */
+const followRow: CSSProperties = {
+  margin: '16px 0 0', paddingTop: 14, borderTop: `1px solid ${LINE}`,
+  fontSize: 13, lineHeight: 1.6, color: 'var(--color-text-sub)',
+}
+
+const followLinks: CSSProperties = {
+  display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
+  alignItems: 'center', gap: '4px 8px', marginTop: 2,
+}
+
+/* 글자 링크라 그냥 두면 손가락이 안 닿습니다 — 위아래 여백으로 넓힙니다 */
+const followLink: CSSProperties = {
+  padding: '7px 2px', textDecoration: 'none',
+  color: 'var(--color-text)', fontWeight: 600,
+  borderBottom: `1px solid ${LINE}`,
+}
 const item: CSSProperties = {
   borderLeft: '3px solid', paddingLeft: 12, marginBottom: 16,
 }
