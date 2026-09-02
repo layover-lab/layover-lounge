@@ -84,8 +84,8 @@
     "namePlaceholder": "もこ",
     "noticeDelete": "推しのファンらしく、やさしい言葉で 🌷",
     "noticeRealPerson": "スクショが出回ると推しに迷惑がかかるかもしれないので 🙏",
-    "notifyTitle": "キャラチャットに招待します",
-    "notifyBody": "登録・フォローしていただけると もっと良いコンテンツを作る大きな力になります 🌷",
+    "notifyTitle": "キャラチャットは9月に本オープンします",
+    "notifyBody": "フォロー・登録しておくと、オープンの日にすぐわかります 🌷",
     "notifyEnter": "キャラチャットに入る",
     "notifyButton": "インスタをフォローする",
     "sending": "のこしています…",
@@ -102,7 +102,8 @@
     "lounge": "キャラチャット",
     "cheer": "応援ルーム",
     "dressroom": "ドレスルーム",
-    "soon": "準備中"
+    "soon": "準備中",
+    "preview": "プレオープン"
   },
   "dressroom": {
     "title": "ドレスルーム",
