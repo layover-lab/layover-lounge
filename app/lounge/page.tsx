@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type CSSProperties } from 'react'
+import { useRef, useState, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { COLOR_KEYS, type ColorKey } from '@/lib/colors'
@@ -40,7 +40,12 @@ export default function LoungeEntry() {
   const [situations, setSituations] = useState<Situation[]>([])
   const [counts, setCounts] = useState<Counts>({})
   const [busy, setBusy] = useState('')
-  const [note, setNote] = useState('')
+
+  /* 뭘 안 채웠는지. 문구를 담지 않고 **어느 칸인지**를 담습니다 —
+     안내를 그 칸 바로 아래에 띄우려면 어느 칸인지 알아야 합니다 */
+  const [missing, setMissing] = useState<'color' | 'name' | null>(null)
+  const colorRef = useRef<HTMLDivElement>(null)
+  const nameRef = useRef<HTMLInputElement>(null)
   const [lang, setLang] = useLang()
   const t = dict(lang).entry
   const colorNames = dict(lang).colors as Record<string, string>
@@ -86,10 +91,23 @@ export default function LoungeEntry() {
   })
 
   async function start(situationKey: string) {
-    /* 화면에 놓인 순서대로 물어봅니다 — 색이 위, 이름이 아래 */
-    if (!colorKey) { setNote(t.needColor); return }
-    if (!name.trim()) { setNote(t.needName); return }
-    setNote('')
+    /* 화면에 놓인 순서대로 물어봅니다 — 색이 위, 이름이 아래.
+
+       ⚠️ 안내만 띄우면 **아무 일도 안 일어난 것처럼 보입니다.**
+          상황 카드는 한참 아래에 있어서, 누른 자리에서는 안내가 안 보입니다.
+          안 채운 칸으로 데려다 놓습니다 — 그래야 뭘 해야 하는지가 눈앞에 있습니다 */
+    if (!colorKey) {
+      setMissing('color')
+      colorRef.current?.scrollIntoView({ block: 'center' })
+      return
+    }
+    if (!name.trim()) {
+      setMissing('name')
+      nameRef.current?.scrollIntoView({ block: 'center' })
+      nameRef.current?.focus()          /* 폰에서는 키보드까지 올라옵니다 */
+      return
+    }
+    setMissing(null)
     setBusy(situationKey)
 
     /* 이 화면이 아는 것만 넘깁니다 — 아바타는 안 물어보므로 건드리지 않습니다.
@@ -130,14 +148,14 @@ export default function LoungeEntry() {
 
       {/* 4×2 로 고정합니다. flex-wrap 은 폭에 따라 6+2 로 깨지는데,
           그러면 8색이 한 세트로 안 읽히고 아래 둘이 남은 것처럼 보입니다 */}
-      <div style={{
+      <div ref={colorRef} style={{
         display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
-        justifyItems: 'center', gap: 12, marginBottom: 20,
+        justifyItems: 'center', gap: 12,
       }}>
         {COLOR_KEYS.map((key) => (
           <button
             key={key}
-            onClick={() => setColorKey(key)}
+            onClick={() => { setColorKey(key); setMissing(null) }}
             aria-label={colorNames[key]}
             style={{
               width: 44,
@@ -153,17 +171,20 @@ export default function LoungeEntry() {
           />
         ))}
       </div>
+      <p aria-live="polite" style={hintStyle}>{missing === 'color' ? t.needColor : ''}</p>
 
       <label style={{ fontSize: 13, color: 'var(--color-text-sub)' }}>
         {t.nameLabel}
       </label>
       <input
+        ref={nameRef}
         value={name}
-        onChange={(e) => setName(e.target.value)}
+        onChange={(e) => { setName(e.target.value); setMissing(null) }}
         placeholder={t.namePlaceholder}
         maxLength={12}
         style={inputStyle}
       />
+      <p aria-live="polite" style={hintStyle}>{missing === 'name' ? t.needName : ''}</p>
 
       <button onClick={() => setOpenRole(!openRole)} style={toggleStyle}>
         {t.roleToggle}
@@ -185,7 +206,6 @@ export default function LoungeEntry() {
       </p>
 
       <h2 style={{ fontSize: 16, fontWeight: 700, margin: '4px 0 10px' }}>{t.situations}</h2>
-      {note && <p style={{ fontSize: 12.5, color: 'var(--color-primary-strong)', margin: '0 0 10px' }}>{note}</p>}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {situations.map((s) => {
@@ -233,6 +253,13 @@ const rowStyle: CSSProperties = {
 const enterStyle: CSSProperties = {
   fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap',
   color: 'var(--color-primary-strong)',
+}
+
+/* 안 채운 칸 바로 아래 한 줄. **빈 문자열일 때도 자리를 차지합니다** —
+   글이 나타날 때 아래가 밀리면 누르려던 버튼이 손가락 밑에서 움직입니다 */
+const hintStyle: CSSProperties = {
+  minHeight: 18, margin: '6px 0 12px',
+  fontSize: 12.5, color: 'var(--color-primary-strong)',
 }
 
 const inputStyle: CSSProperties = {
