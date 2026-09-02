@@ -48,7 +48,7 @@ const globe: CSSProperties = { fontSize: 13, padding: '0 4px 0 7px', lineHeight:
 
 const wrap: CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 2, padding: 2,
-  background: 'var(--color-surface)', border: '1px solid #F2E4E8',
+  background: 'var(--color-surface)', border: '1px solid var(--color-line)',
   borderRadius: 'var(--radius-full)',
 }
 

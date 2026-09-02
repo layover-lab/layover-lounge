@@ -400,7 +400,7 @@ const emptyStyle: CSSProperties = {
   fontSize: 13, color: 'var(--color-text-sub)', textAlign: 'center', padding: '28px 0',
 }
 const noticeBox: CSSProperties = {
-  marginTop: 16, paddingTop: 14, borderTop: '1px solid #F7EDF1',
+  marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--color-line-soft)',
   display: 'flex', flexDirection: 'column', gap: 6,
 }
 const noticeStrong: CSSProperties = { margin: 0, fontSize: 12.5, fontWeight: 600, lineHeight: 1.55 }
@@ -411,7 +411,7 @@ const label: CSSProperties = {
 }
 const input: CSSProperties = {
   width: '100%', padding: 12, marginBottom: 4, fontSize: 15,
-  borderRadius: 'var(--radius-full)', border: '1px solid #F2E4E8', background: 'var(--color-bg)',
+  borderRadius: 'var(--radius-full)', border: '1px solid var(--color-line)', background: 'var(--color-bg)',
 }
 const sendBtn: CSSProperties = {
   padding: '0 18px', borderRadius: 'var(--radius-full)', border: 'none',

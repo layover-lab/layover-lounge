@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { dict, field } from '@/lib/i18n'
@@ -11,9 +11,33 @@ import { KEYS, readJson, writeJson } from '@/lib/storage'
 import { ERR, isErr } from '@/lib/errors'
 import LangToggle from '@/components/LangToggle'
 import ReportSheet from '@/components/ReportSheet'
-import { LINE, dot, tab, ctaBtn, linkBtn } from '@/lib/ui'
+import BackstageIntro from './BackstageIntro'
+import AskPicker from './AskPicker'
+import { dot, tab, ctaBtn, linkBtn } from '@/lib/ui'
 import { useViewportHeight } from '@/lib/use-viewport-height'
 import { track } from '@/lib/analytics'
+import {
+  BACKSTAGE_BG,
+  askLineStyle,
+  askMineStyle,
+  askQuoteStyle,
+  backStyle,
+  backstageLeadStyle,
+  bubbleFor,
+  hiddenBarStyle,
+  memberListStyle,
+  memberRowStyle,
+  membersBtnStyle,
+  menuItemStyle,
+  menuStyle,
+  moreStyle,
+  newDotStyle,
+  newMsgStyle,
+  noteStyle,
+  sendStyle,
+  tabBarStyle,
+  youTagStyle,
+} from './styles'
 type Member = { id: string; name: string; role: string | null; color_key: string }
 
 /* 같은 방 안의 두 층 (기획서 5.4). 방을 옮기는 게 아니라 탭이 바뀌는 것입니다 */
@@ -81,7 +105,10 @@ export default function Stage() {
   const { hidden, hide, unhideAll } = useHidden()
   const [menuFor, setMenuFor] = useState<string | null>(null)      /* ⋯ 를 연 참가자 */
   const [reportFor, setReportFor] = useState<Msg | null>(null)
-  const [reportNote, setReportNote] = useState('')
+  /* 화면 위쪽에 잠깐 뜨는 한 줄. **신고 전용이 아닙니다** —
+     물어보기 실패도 여기로 옵니다. 이름을 reportNote 로 두면 나중에
+     신고 문구를 고치다가 물어보기 화면이 깨집니다 */
+  const [note, setNote] = useState('')
 
   /* 물어볼 문장 고르기.
 
@@ -96,8 +123,6 @@ export default function Stage() {
   const [picked, setPicked] = useState<string[]>([])
   const ASK_MAX = 3
 
-  /* 백스테이지가 비었을 때 — 설명이 먼저, 템플릿은 이 버튼 뒤로 (아래 주석) */
-  const [showTpl, setShowTpl] = useState(false)
 
   /* 백스테이지를 마지막으로 본 시각 (방별).
      로그인이 없어서 푸시도 메일도 못 씁니다 — 다시 들어왔을 때 점으로 알리는 게 최선입니다.
@@ -144,8 +169,7 @@ export default function Stage() {
     if (!ok) {
       /* ⚠️ 조용히 실패하면 답을 기다리게 됩니다. 고른 것도 그대로 둡니다 */
       setAskOpen(true)
-      setReportNote(t.askFailed)
-      setTimeout(() => setReportNote(''), 4000)
+      showNote(t.askFailed)
       return
     }
 
@@ -166,10 +190,11 @@ export default function Stage() {
     track('correction_requested', { lang, count: chosen.length })
   }
 
-  function noteAndClose(note: string) {
-    setReportFor(null)
-    setReportNote(note)
-    setTimeout(() => setReportNote(''), 4000)
+  /* 잠깐 떴다 사라지는 안내. 이름이 note 와 겹치면 안 됩니다 —
+     바깥 상태를 가려서 읽는 사람이 어느 쪽인지 헷갈립니다 */
+  function showNote(msg: string) {
+    setNote(msg)
+    setTimeout(() => setNote(''), 4000)
   }
 
   useEffect(() => {
@@ -388,7 +413,7 @@ export default function Stage() {
       height: vh ? `${vh}px` : '100dvh',
       display: 'flex', flexDirection: 'column',
     }}>
-      <header style={{ background: '#FDE3EE', padding: '14px 16px' }}>
+      <header style={{ background: 'var(--color-header)', padding: '14px 16px' }}>
         {/* 오른쪽 위는 👥 가 쓰고 있어서 나가기 줄에 둡니다 */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
           <button onClick={() => router.push('/lounge')} style={backStyle}>← {t.back}</button>
@@ -470,7 +495,7 @@ export default function Stage() {
           <button onClick={unhideAll} style={linkBtn}>{t.unhide}</button>
         </div>
       )}
-      {reportNote && <p style={reportNoteStyle}>{reportNote}</p>}
+      {note && <p style={noteStyle}>{note}</p>}
 
       {/* [새 메시지 ↓] 가 설 자리입니다. 스크롤되는 상자 **안**에 넣으면
           버튼이 글을 따라 같이 올라가 버립니다 */}
@@ -490,56 +515,10 @@ export default function Stage() {
           <p style={{ color: 'var(--color-text-sub)', fontSize: 13, textAlign: 'center' }}>{t.empty}</p>
         )}
 
-        {/* 빈 채팅창을 주지 않습니다 (5.4). 다만 **설명이 먼저입니다** —
-            「답장은 어느 정도 간격으로?」는 이미 멤놀을 해본 사람의 질문입니다.
-            처음 온 사람은 백스테이지가 뭔지도 모르는 채로 낯선 사람들에게
-            약속 세 개를 던지게 됩니다.
-
-            그렇다고 템플릿을 없애지는 않습니다 — 설명은 읽고 끝나지만
-            템플릿은 행동을 만듭니다. 버튼 뒤로 한 칸 물립니다 */}
-        {shown.length === 0 && layer === 'backstage' && !showTpl && (
-          <div style={tplCardStyle}>
-            <b style={{ fontSize: 14 }}>{t.bsTitle}</b>
-
-            {/* 무대와 백스테이지를 **나란히** 놓습니다. 이게 이 제품의 개념 전체이고
-                (3.1 — 언제든 나로 돌아올 수 있다), 대비로 보여주는 게 제일 빨리 읽힙니다 */}
-            <dl style={twoWayStyle}>
-              <dt style={twoWayTermStyle}>🎭 {t.tabStage}</dt>
-              <dd style={twoWayDescStyle}>{t.bsStageDesc}</dd>
-              <dt style={twoWayTermStyle}>☕ {t.tabBackstage}</dt>
-              <dd style={twoWayDescStyle}>{t.bsBackDesc}</dd>
-            </dl>
-
-            <ul style={{ margin: '0 0 14px', padding: 0, listStyle: 'none', fontSize: 13, lineHeight: 1.9, textAlign: 'left' }}>
-              {/* 세 번째가 새로 필요합니다 — 물어보기가 여기로 온다는 걸 아무도 모릅니다 */}
-              <li>· {t.bsUse1}</li>
-              <li>· {t.bsUse2}</li>
-              <li>· {t.bsUse3}</li>
-            </ul>
-
-            <button onClick={() => setShowTpl(true)} style={tplSendStyle}>{t.bsPlan}</button>
-          </div>
+        {shown.length === 0 && layer === 'backstage' && (
+          <BackstageIntro t={t} onSend={send} />
         )}
 
-        {shown.length === 0 && layer === 'backstage' && showTpl && (
-          <div style={tplCardStyle}>
-            <b style={{ fontSize: 14 }}>{t.tplTitle}</b>
-            <ul style={{ margin: '10px 0 14px', padding: 0, listStyle: 'none', fontSize: 13, lineHeight: 1.9 }}>
-              <li>· {t.tplQ1}</li>
-              <li>· {t.tplQ2}</li>
-              <li>· {t.tplQ3}</li>
-            </ul>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => send([t.tplTitle, '· ' + t.tplQ1, '· ' + t.tplQ2, '· ' + t.tplQ3].join('\n'))}
-                style={{ ...tplSendStyle, flex: 1 }}
-              >
-                {t.tplSend}
-              </button>
-              <button onClick={() => setShowTpl(false)} style={askCancelStyle}>{t.askCancel}</button>
-            </div>
-          </div>
-        )}
 
         {shown.map((m) => {
           /* 내가 친 것과 남이 친 것을 한눈에 가릅니다 (학생 피드백 2026-08-28) */
@@ -609,49 +588,21 @@ export default function Stage() {
           reporterId={participantId}
           targetId={reportFor.participant_id}
           onClose={() => setReportFor(null)}
-          onDone={noteAndClose}
+          onDone={(msg) => { setReportFor(null); showNote(msg) }}
         />
       )}
 
       {/* 스크롤 영역 밖(입력창 바로 위)에 둡니다 — 대화가 길면 위로 밀려 안 보입니다 */}
       {layer === 'backstage' && askOpen && (
-        <div style={askCardStyle}>
-          <div style={{ marginBottom: 10 }}>
-            <b style={{ fontSize: 13.5 }}>{t.askPickTitle}</b>
-            <span style={{ fontSize: 12, color: 'var(--color-text-sub)', marginLeft: 6 }}>
-              {t.askPickMax}
-            </span>
-          </div>
-
-          <ul style={pickListStyle}>
-            {myLines.map((m) => {
-              const on = picked.includes(m.id)
-              /* 다 찼을 때 안 고른 줄은 눌러도 안 되는 게 보여야 합니다 */
-              const full = !on && picked.length >= ASK_MAX
-              return (
-                <li key={m.id}>
-                  <button
-                    onClick={() => togglePick(m.id)}
-                    aria-pressed={on}
-                    style={pickRow(on, full)}
-                  >
-                    <span style={{ flex: 'none' }}>{on ? '☑' : '☐'}</span>
-                    <span style={pickTextStyle}>{m.body}</span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={sendAsk}
-              disabled={picked.length === 0}
-              style={{ ...tplSendStyle, flex: 1, opacity: picked.length ? 1 : 0.45 }}
-            >{t.askSend}</button>
-            <button onClick={() => setAskOpen(false)} style={askCancelStyle}>{t.askClose}</button>
-          </div>
-        </div>
+        <AskPicker
+          t={t}
+          lines={myLines}
+          picked={picked}
+          max={ASK_MAX}
+          onToggle={togglePick}
+          onSend={sendAsk}
+          onClose={() => setAskOpen(false)}
+        />
       )}
 
       <div style={{ display: 'flex', gap: 8, padding: 12, background: 'var(--color-surface)' }}>
@@ -663,189 +614,10 @@ export default function Stage() {
           }}
           placeholder={t.placeholder}
           maxLength={500}
-          style={{ flex: 1, padding: 12, borderRadius: 'var(--radius-full)', border: '1px solid #F2E4E8' }}
+          style={{ flex: 1, padding: 12, borderRadius: 'var(--radius-full)', border: '1px solid var(--color-line)' }}
         />
         <button onClick={() => send()} style={sendStyle}>{t.send}</button>
       </div>
     </main>
   )
-}
-
-const membersBtnStyle: CSSProperties = {
-  flex: 'none', background: 'var(--color-surface)', border: '1px solid #F2C9DA',
-  borderRadius: 'var(--radius-full)', padding: '6px 12px',
-  fontSize: 13, fontWeight: 600, color: 'var(--color-text)', cursor: 'pointer',
-}
-
-const memberListStyle: CSSProperties = {
-  listStyle: 'none', margin: '12px 0 0', padding: '12px 0 0',
-  borderTop: '1px solid #F2C9DA',
-  display: 'flex', flexDirection: 'column', gap: 8,
-}
-
-const memberRowStyle: CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 7, fontSize: 14,
-}
-
-const youTagStyle: CSSProperties = {
-  fontSize: 11, padding: '1px 7px', borderRadius: 'var(--radius-full)',
-  background: 'var(--color-primary)', color: 'var(--color-text)',
-}
-
-const backStyle: CSSProperties = {
-  background: 'none', border: 'none', padding: 0,
-  fontSize: 12, color: 'var(--color-text-sub)', cursor: 'pointer',
-}
-
-const bubbleStyle: CSSProperties = {
-  display: 'inline-block', background: 'var(--color-surface)',
-  border: '1px solid #F2E4E8', borderRadius: 'var(--radius-bubble)',
-  padding: '10px 14px', fontSize: 15, maxWidth: '85%', whiteSpace: 'pre-wrap',
-}
-
-/* ── 백스테이지 ──────────────────────────────────
-   무대는 깅엄·핑크, 백스테이지는 무지·회청색입니다 (기획서 5.4).
-   색이 바뀌면 「지금 캐릭터가 아니라 나로 말하는 중」이 설명 없이 읽힙니다 */
-const BACKSTAGE_BG = '#F1F4F8'
-
-/* 안 본 백스테이지 글이 있다는 표시. 숫자를 세지 않습니다 — 몇 개인지보다 있는지가 중요합니다 */
-const newDotStyle: CSSProperties = {
-  display: 'inline-block', width: 6, height: 6, borderRadius: 999,
-  background: 'var(--color-primary-strong)', marginLeft: 5, verticalAlign: 'middle',
-}
-
-/* 탭 줄 맨 오른쪽. 무대/백스테이지 알약과 같은 높이로 두되 **채우지 않습니다** —
-   층을 고르는 탭과 같은 무게로 보이면 안 됩니다 */
-const askMineStyle: CSSProperties = {
-  marginLeft: 'auto', flex: 'none', whiteSpace: 'nowrap',
-  padding: '8px 12px', borderRadius: 'var(--radius-full)',
-  border: `1px solid ${LINE}`, background: 'var(--color-surface)',
-  color: 'var(--color-text-sub)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
-}
-
-/* 고를 문장 목록. 길어지면 카드가 화면을 다 먹어서 높이를 막습니다 */
-const pickListStyle: CSSProperties = {
-  listStyle: 'none', margin: '0 0 12px', padding: 0,
-  display: 'flex', flexDirection: 'column', gap: 6,
-  maxHeight: 168, overflowY: 'auto',
-}
-const pickTextStyle: CSSProperties = {
-  flex: 1, textAlign: 'left', overflow: 'hidden',
-  textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-}
-function pickRow(on: boolean, full: boolean): CSSProperties {
-  return {
-    width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-    padding: '9px 11px', borderRadius: 10, cursor: full ? 'default' : 'pointer',
-    border: `1px solid ${on ? '#C9D6E6' : '#E8EDF3'}`,
-    background: on ? '#E6EDF6' : 'var(--color-surface)',
-    color: 'var(--color-text)', fontSize: 13.5,
-    opacity: full ? 0.45 : 1,
-  }
-}
-
-/* 물어본 문장. 인용부호로 「내가 한 말」이 아니라 「내가 물어보는 대상」임을 보입니다 */
-const askQuoteStyle: CSSProperties = {
-  display: 'block', fontSize: 15, marginBottom: 6,
-}
-const askLineStyle: CSSProperties = {
-  display: 'block', fontSize: 13, lineHeight: 1.6, color: 'var(--color-text-sub)',
-}
-
-/* 보내기 전 확인 카드 — 백스테이지 색(무지·회청)을 씁니다 */
-const askCardStyle: CSSProperties = {
-  margin: '0 12px', padding: 14,
-  background: '#FFFFFF', border: '1px solid #DDE5EE',
-  borderRadius: 'var(--radius-card)',
-}
-const askCancelStyle: CSSProperties = {
-  flex: 'none', padding: '11px 16px', borderRadius: 'var(--radius-full)',
-  border: '1px solid #DDE5EE', background: 'var(--color-surface)',
-  color: 'var(--color-text-sub)', fontSize: 14, cursor: 'pointer',
-}
-
-const moreStyle: CSSProperties = {
-  background: 'none', border: 'none', cursor: 'pointer',
-  color: 'var(--color-text-sub)', fontSize: 15, lineHeight: 1, padding: '0 6px',
-}
-const menuStyle: CSSProperties = {
-  display: 'flex', gap: 6, marginTop: 6,
-}
-const menuItemStyle: CSSProperties = {
-  padding: '6px 12px', borderRadius: 'var(--radius-full)',
-  border: `1px solid ${LINE}`, background: 'var(--color-surface)',
-  color: 'var(--color-text)', fontSize: 12, cursor: 'pointer',
-}
-const hiddenBarStyle: CSSProperties = {
-  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-  padding: '8px 16px', background: 'var(--color-neutral)',
-  fontSize: 12, color: 'var(--color-text-sub)',
-}
-const reportNoteStyle: CSSProperties = {
-  margin: 0, padding: '8px 16px', background: 'var(--color-primary-tint)',
-  fontSize: 12.5, color: 'var(--color-text)',
-}
-
-const tabBarStyle: CSSProperties = {
-  display: 'flex', gap: 6, padding: '10px 16px 0', background: 'var(--color-surface)',
-}
-const backstageLeadStyle: CSSProperties = {
-  margin: 0, padding: '8px 16px', background: BACKSTAGE_BG,
-  fontSize: 12, color: 'var(--color-text-sub)',
-}
-const tplCardStyle: CSSProperties = {
-  background: 'var(--color-surface)', border: '1px solid #DDE5EE',
-  borderRadius: 'var(--radius-card)', padding: 16, textAlign: 'center',
-}
-/* 두 층을 나란히. 용어(무대/백스테이지)는 **탭 라벨을 그대로** 씁니다 —
-   같은 것을 두 이름으로 부르면 처음 온 사람이 다른 물건으로 봅니다 */
-const twoWayStyle: CSSProperties = {
-  display: 'grid', gridTemplateColumns: 'auto 1fr',
-  columnGap: 12, rowGap: 4, margin: '12px 0 14px',
-  textAlign: 'left', fontSize: 13,
-}
-const twoWayTermStyle: CSSProperties = {
-  fontWeight: 700, whiteSpace: 'nowrap',
-}
-const twoWayDescStyle: CSSProperties = {
-  margin: 0, color: 'var(--color-text-sub)',
-}
-
-const tplSendStyle: CSSProperties = {
-  width: '100%', padding: '11px 14px', borderRadius: 'var(--radius-full)',
-  border: '1px solid #C9D6E6', background: '#E6EDF6',
-  color: 'var(--color-text)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
-}
-const backBubbleStyle: CSSProperties = {
-  display: 'inline-block', background: '#FFFFFF',
-  border: '1px solid #DDE5EE', borderRadius: 'var(--radius-bubble)',
-  padding: '10px 14px', fontSize: 15, maxWidth: '85%', whiteSpace: 'pre-wrap',
-}
-const myBackBubbleStyle: CSSProperties = {
-  ...backBubbleStyle, background: '#E6EDF6', border: '1px solid #C9D6E6',
-}
-function bubbleFor(layer: Layer, mine: boolean): CSSProperties {
-  if (layer === 'backstage') return mine ? myBackBubbleStyle : backBubbleStyle
-  return mine ? myBubbleStyle : bubbleStyle
-}
-
-/* 내 말풍선 — 핑크 틴트. 글자는 --color-text 라 대비가 유지됩니다 */
-const myBubbleStyle: CSSProperties = {
-  ...bubbleStyle,
-  background: 'var(--color-primary-tint)',
-  border: '1px solid var(--color-primary)',
-}
-
-/* 위를 읽는 사람을 끌어내리지 않습니다 — 내려갈지는 본인이 정합니다 (기획서 5.12 ③) */
-const newMsgStyle: CSSProperties = {
-  position: 'absolute', left: '50%', bottom: 12, transform: 'translateX(-50%)',
-  padding: '8px 16px', borderRadius: 'var(--radius-full)',
-  border: '1px solid var(--color-primary)', background: 'var(--color-surface)',
-  color: 'var(--color-text)', fontSize: 13, fontWeight: 600,
-  boxShadow: '0 2px 8px rgba(43, 34, 38, .12)', cursor: 'pointer', whiteSpace: 'nowrap',
-}
-
-const sendStyle: CSSProperties = {
-  padding: '0 18px', borderRadius: 'var(--radius-full)', border: 'none',
-  background: 'var(--color-primary)', fontWeight: 600, cursor: 'pointer',
 }

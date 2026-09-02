@@ -24,6 +24,20 @@
   --color-text:           #2B2226;
   --color-text-sub:       #8E8E93;
 
+  /* 선 (기획서 17.2 에 없던 것 — 코드에 흩어져 있던 값을 여기로 모읍니다) */
+  --color-line:        #F2E4E8;   /* 카드·입력칸 기본 테두리 */
+  --color-line-soft:   #F7EDF1;   /* 더 옅은 구분선 */
+  --color-line-strong: #F2C9DA;   /* 눌리는 것의 테두리 */
+  --color-header:      #FDE3EE;   /* 방 상단 (17.5) */
+
+  /* 백스테이지 — 무대와 확실히 다른 층 (기획서 5.4 · 17.5).
+     무대가 깅엄·핑크면 여기는 무지·회청이고 채도가 한 단계 낮습니다 */
+  --backstage-bg:     #F1F4F8;
+  --backstage-line:   #DDE5EE;
+  --backstage-tint:   #E6EDF6;
+  --backstage-strong: #C9D6E6;
+  --backstage-line-soft: #E8EDF3;
+
   --radius-card:   16px;
   --radius-bubble: 18px;
   --radius-full:   999px;

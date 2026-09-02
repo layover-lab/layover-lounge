@@ -267,7 +267,7 @@ const inputStyle: CSSProperties = {
   padding: 12,
   fontSize: 15,
   borderRadius: 'var(--radius-card)',
-  border: '1px solid #F2E4E8',
+  border: '1px solid var(--color-line)',
   background: 'var(--color-surface)',
   color: 'var(--color-text)',
   marginTop: 6,

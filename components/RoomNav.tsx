@@ -55,5 +55,5 @@ const badgeStyle: CSSProperties = {
 
 const wrap: CSSProperties = {
   display: 'flex', justifyContent: 'center', gap: 8,
-  marginTop: 28, paddingTop: 18, borderTop: '1px solid #F7EDF1',
+  marginTop: 28, paddingTop: 18, borderTop: '1px solid var(--color-line-soft)',
 }

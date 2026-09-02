@@ -11,7 +11,7 @@ import type { CSSProperties } from 'react'
    ───────────────────────────────────────────────────────── */
 
 /** 카드·입력칸 테두리 */
-export const LINE = '#F2E4E8'
+export const LINE = 'var(--color-line)'
 
 export const wrap: CSSProperties = {
   width: '100%', maxWidth: 480, margin: '0 auto', padding: '28px 18px 60px',
