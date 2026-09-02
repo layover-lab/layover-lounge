@@ -83,13 +83,18 @@ export default function Stage() {
   const [reportFor, setReportFor] = useState<Msg | null>(null)
   const [reportNote, setReportNote] = useState('')
 
-  /* 무대에서 집어 온 문장. 백스테이지에 도착하면 보내기 전 카드로 떠 있습니다.
+  /* 물어볼 문장 고르기.
 
-     ⚠️ 무대의 링크는 **접수 버튼이 아니라 문**입니다. 눌러도 아무 데도 안 보내고
-        백스테이지로 데려가기만 합니다 — 학습은 사람으로 말하는 층의 일이니까요 (5.4).
-        그리고 문장을 안고 가야 합니다. 백스테이지에서 다시 옮겨 적으라고 하면
-        아무도 안 합니다 — 흐름이 거기서 끊깁니다 */
-  const [askDraft, setAskDraft] = useState<{ messageId: string; body: string } | null>(null)
+     진입점은 **탭 줄 오른쪽 하나뿐**입니다. 말풍선마다 링크를 달면 롤플레이 화면이
+     학습 도구가 되고(5.15), 마지막 문장에만 달면 아까 쓴 것에는 못 묻습니다.
+     고정된 자리 하나면 둘 다 풀립니다 — 무대에는 학습 UI가 하나도 안 남습니다.
+
+     ⚠️ 3개까지입니다. 다섯 개를 한꺼번에 던지면 답하는 사람이 숙제를 받습니다 —
+        자원봉사자는 미루고, 미루면 답이 안 옵니다. 이 방은 묻는 비용만큼
+        **답하는 비용**이 중요합니다 */
+  const [askOpen, setAskOpen] = useState(false)
+  const [picked, setPicked] = useState<string[]>([])
+  const ASK_MAX = 3
 
   /* 백스테이지가 비었을 때 — 설명이 먼저, 템플릿은 이 버튼 뒤로 (아래 주석) */
   const [showTpl, setShowTpl] = useState(false)
@@ -111,34 +116,54 @@ export default function Stage() {
     setMembers((data as Member[]) ?? [])
   }, [])
 
+  function openAsk() {
+    /* 방금 쓴 것을 미리 골라둡니다 — 대부분은 「방금 그거」를 묻습니다 */
+    setPicked(myLines.length ? [myLines[0].id] : [])
+    setAskOpen(true)
+    setLayer('backstage')
+  }
+
+  function togglePick(id: string) {
+    setPicked((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id)
+      : prev.length >= ASK_MAX ? prev
+      : [...prev, id]
+    )
+  }
+
   /* 물어보기 — 백스테이지에 **대화로** 올립니다. 답하는 쪽에는 아무 UI도 만들지 않습니다.
      그냥 답장이면 되니까요 */
   async function sendAsk() {
-    if (!askDraft || !room || !participantId) return
-    const draft = askDraft
-    setAskDraft(null)
+    if (!room || !participantId || picked.length === 0) return
 
-    const ok = await send(draft.body, 'ask')
+    /* 고른 순서가 아니라 **말한 순서**로 보냅니다 — 대화 흐름대로 읽혀야 합니다 */
+    const chosen = messages.filter((m) => picked.includes(m.id))
+    setAskOpen(false)
+
+    const ok = await send(chosen.map((m) => m.body).join('\n'), 'ask')
     if (!ok) {
-      /* ⚠️ 조용히 실패하면 답을 기다리게 됩니다. 쓴 것도 돌려놓습니다 */
-      setAskDraft(draft)
+      /* ⚠️ 조용히 실패하면 답을 기다리게 됩니다. 고른 것도 그대로 둡니다 */
+      setAskOpen(true)
       setReportNote(t.askFailed)
       setTimeout(() => setReportNote(''), 4000)
       return
     }
 
-    /* 대화와 **별개로** 한 줄 남깁니다 — 「누가 뭘 물었나」가 강좌(26장)의 커리큘럼이자
-       나중 AI 1차 첨삭의 재료입니다. 여기서 실패해도 사용자에게는 알리지 않습니다:
+    /* 대화와 **별개로** 문장마다 한 줄 남깁니다 — 「누가 뭘 물었나」가 강좌(26장)의
+       커리큘럼이자 나중 AI 1차 첨삭의 재료입니다. 여기서 실패해도 알리지 않습니다:
        물어본 것은 이미 백스테이지에 올라가 있고, 답은 거기서 옵니다 */
-    const { error } = await supabase.from('corrections').insert({
-      room_id: room.id,
-      message_id: draft.messageId,
-      requester_id: participantId,
-      body: draft.body,
-    })
-    if (error && !isErr(error, ERR.duplicate)) console.error('첨삭 기록 실패:', error)
+    for (const m of chosen) {
+      const { error } = await supabase.from('corrections').insert({
+        room_id: room.id,
+        message_id: m.id,
+        requester_id: participantId,
+        body: m.body,
+      })
+      if (error && !isErr(error, ERR.duplicate)) console.error('첨삭 기록 실패:', error)
+    }
 
-    track('correction_requested', { lang })
+    setPicked([])
+    track('correction_requested', { lang, count: chosen.length })
   }
 
   function noteAndClose(note: string) {
@@ -336,9 +361,11 @@ export default function Stage() {
 
   if (!room) return <main style={{ padding: 24 }}>...</main>
 
-  /* 버튼은 **내가 방금 보낸 한 문장에만** 붙입니다.
-     모든 말풍선에 달면 롤플레이 화면이 학습 도구처럼 보이고, ⋯ 안에 숨기면 아무도 못 찾습니다 */
-  const lastMine = [...shown].reverse().find((m) => m.participant_id === participantId)
+  /* 물어볼 수 있는 것 — **무대에서 내가 쓴 문장만**, 최근 것이 위로.
+     'ask' 자신은 뺍니다. 물어본 것을 다시 물어볼 이유가 없습니다 */
+  const myLines = messages
+    .filter((m) => m.layer === 'stage' && m.participant_id === participantId && m.kind !== 'ask')
+    .slice().reverse()
 
   /* 내가 쓴 글로 점이 뜨면 이상합니다 — 남이 쓴 것만 셉니다 */
   const backstageNew =
@@ -429,6 +456,11 @@ export default function Stage() {
             {l === 'backstage' && backstageNew && <i aria-hidden style={newDotStyle} />}
           </button>
         ))}
+
+        {/* 쓴 게 없으면 안 보여줍니다 — 누를 게 없는 버튼은 없느니만 못합니다 */}
+        {myLines.length > 0 && (
+          <button onClick={openAsk} style={askMineStyle}>💬 {t.askMine}</button>
+        )}
       </div>
       {layer === 'backstage' && <p style={backstageLeadStyle}>{t.backstageLead}</p>}
 
@@ -542,21 +574,15 @@ export default function Stage() {
               <div style={bubbleFor(layer, mine)}>
                 {m.kind === 'ask' ? (
                   <>
-                    {/* 물어본 문장. 질문 줄은 **보는 사람 언어**로 그립니다 —
+                    {/* 물어본 문장들. 질문 줄은 **보는 사람 언어**로 그립니다 —
                         일본어로 물어도 한국인 화면에는 한국어로 보여야 답이 옵니다 */}
-                    <span style={askQuoteStyle}>「{m.body}」</span>
+                    {m.body.split('\n').map((line, i) => (
+                      <span key={i} style={askQuoteStyle}>「{line}」</span>
+                    ))}
                     <span style={askLineStyle}>{t.askQ1}<br />{t.askQ2}</span>
                   </>
                 ) : m.body}
               </div>
-
-              {/* 무대에서 내가 방금 쓴 문장에만. **접수가 아니라 문입니다** */}
-              {layer === 'stage' && lastMine?.id === m.id && m.kind !== 'ask' && (
-                <button
-                  onClick={() => { setAskDraft({ messageId: m.id, body: m.body }); setLayer('backstage') }}
-                  style={askDoorStyle}
-                >💬 {t.askStage}</button>
-              )}
 
               {menuFor === m.participant_id && !mine && (
                 <div style={menuStyle}>
@@ -587,15 +613,43 @@ export default function Stage() {
         />
       )}
 
-      {/* 무대에서 집어 온 문장. 스크롤 영역 밖(입력창 바로 위)에 둡니다 —
-          대화가 길면 위로 밀려 올라가서 안 보입니다 */}
-      {layer === 'backstage' && askDraft && (
+      {/* 스크롤 영역 밖(입력창 바로 위)에 둡니다 — 대화가 길면 위로 밀려 안 보입니다 */}
+      {layer === 'backstage' && askOpen && (
         <div style={askCardStyle}>
-          <p style={{ ...askQuoteStyle, margin: '0 0 8px' }}>「{askDraft.body}」</p>
-          <p style={{ ...askLineStyle, margin: '0 0 12px' }}>{t.askQ1}<br />{t.askQ2}</p>
+          <div style={{ marginBottom: 10 }}>
+            <b style={{ fontSize: 13.5 }}>{t.askPickTitle}</b>
+            <span style={{ fontSize: 12, color: 'var(--color-text-sub)', marginLeft: 6 }}>
+              {t.askPickMax}
+            </span>
+          </div>
+
+          <ul style={pickListStyle}>
+            {myLines.map((m) => {
+              const on = picked.includes(m.id)
+              /* 다 찼을 때 안 고른 줄은 눌러도 안 되는 게 보여야 합니다 */
+              const full = !on && picked.length >= ASK_MAX
+              return (
+                <li key={m.id}>
+                  <button
+                    onClick={() => togglePick(m.id)}
+                    aria-pressed={on}
+                    style={pickRow(on, full)}
+                  >
+                    <span style={{ flex: 'none' }}>{on ? '☑' : '☐'}</span>
+                    <span style={pickTextStyle}>{m.body}</span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={sendAsk} style={{ ...tplSendStyle, flex: 1 }}>{t.askSend}</button>
-            <button onClick={() => setAskDraft(null)} style={askCancelStyle}>{t.askCancel}</button>
+            <button
+              onClick={sendAsk}
+              disabled={picked.length === 0}
+              style={{ ...tplSendStyle, flex: 1, opacity: picked.length ? 1 : 0.45 }}
+            >{t.askSend}</button>
+            <button onClick={() => setAskOpen(false)} style={askCancelStyle}>{t.askClose}</button>
           </div>
         </div>
       )}
@@ -660,10 +714,34 @@ const newDotStyle: CSSProperties = {
   background: 'var(--color-primary-strong)', marginLeft: 5, verticalAlign: 'middle',
 }
 
-/* 말풍선 아래 작은 링크. 주 동작(대화)과 경쟁하면 안 됩니다 —
-   여기가 커지면 롤플레이 화면이 학습 도구처럼 보입니다 (기획서 5.15) */
-const askDoorStyle: CSSProperties = {
-  ...linkBtn, marginTop: 5, fontSize: 11.5, textAlign: 'left',
+/* 탭 줄 맨 오른쪽. 무대/백스테이지 알약과 같은 높이로 두되 **채우지 않습니다** —
+   층을 고르는 탭과 같은 무게로 보이면 안 됩니다 */
+const askMineStyle: CSSProperties = {
+  marginLeft: 'auto', flex: 'none', whiteSpace: 'nowrap',
+  padding: '8px 12px', borderRadius: 'var(--radius-full)',
+  border: `1px solid ${LINE}`, background: 'var(--color-surface)',
+  color: 'var(--color-text-sub)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+}
+
+/* 고를 문장 목록. 길어지면 카드가 화면을 다 먹어서 높이를 막습니다 */
+const pickListStyle: CSSProperties = {
+  listStyle: 'none', margin: '0 0 12px', padding: 0,
+  display: 'flex', flexDirection: 'column', gap: 6,
+  maxHeight: 168, overflowY: 'auto',
+}
+const pickTextStyle: CSSProperties = {
+  flex: 1, textAlign: 'left', overflow: 'hidden',
+  textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+}
+function pickRow(on: boolean, full: boolean): CSSProperties {
+  return {
+    width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+    padding: '9px 11px', borderRadius: 10, cursor: full ? 'default' : 'pointer',
+    border: `1px solid ${on ? '#C9D6E6' : '#E8EDF3'}`,
+    background: on ? '#E6EDF6' : 'var(--color-surface)',
+    color: 'var(--color-text)', fontSize: 13.5,
+    opacity: full ? 0.45 : 1,
+  }
 }
 
 /* 물어본 문장. 인용부호로 「내가 한 말」이 아니라 「내가 물어보는 대상」임을 보입니다 */
