@@ -72,7 +72,8 @@
     "r_spam": "스팸",
     "r_scam": "사기·결제 유도",
     "r_other": "기타",
-    "starterLead": "이렇게 시작해볼까요?"
+    "starterLead": "이렇게 시작해볼까요?",
+    "slowLive": "지금 연결이 느려요. 새 글이 조금 늦게 보일 수 있어요"
   },
   "colors": {
     "yellow": "노랑",

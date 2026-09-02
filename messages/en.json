@@ -72,7 +72,8 @@
     "r_spam": "Spam",
     "r_scam": "Scam or payment bait",
     "r_other": "Something else",
-    "starterLead": "Want to start like this?"
+    "starterLead": "Want to start like this?",
+    "slowLive": "Connection is slow. New messages may take a moment"
   },
   "colors": {
     "yellow": "Yellow",

@@ -17,6 +17,7 @@ import { dot, tab, ctaBtn, linkBtn } from '@/lib/ui'
 import { useViewportHeight } from '@/lib/use-viewport-height'
 import { track } from '@/lib/analytics'
 import {
+  slowStyle,
   starterWrapStyle,
   starterLeadStyle,
   starterChipStyle,
@@ -70,6 +71,23 @@ type Room = {
 /* 화면에 못 들어간 이유. 둘 다 나가는 버튼만 있는 한 장짜리 화면입니다 */
 type Blocked = 'full' | 'missing' | null
 
+/* 들어온 글을 화면 목록에 합칩니다. 실시간과 폴링이 **같은 규칙**을 써야 합니다.
+
+   · 내가 방금 낙관적으로 그려둔 문장이면 진짜 행으로 갈아끼웁니다. 그냥 두면
+     화면은 맞게 보이지만 id 가 브라우저에서 만든 값이라, 그 id 로 첨삭을 넣는
+     순간 DB 에 없는 메시지라며 거절당합니다 (corrections.message_id 가 참조)
+   · 이미 있는 id 는 버립니다. 폴링과 실시간이 같은 글을 둘 다 가져올 수 있습니다 */
+function merge(prev: Msg[], incoming: Msg[]): Msg[] {
+  let next = prev
+  for (const m of incoming) {
+    if (next.some((x) => x.id === m.id)) continue
+    const i = next.findIndex((x) => x.client_msg_id && x.client_msg_id === m.client_msg_id)
+    if (i === -1) next = [...next, m]
+    else { next = [...next]; next[i] = m }
+  }
+  return next
+}
+
 export default function Stage() {
   const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
@@ -91,6 +109,17 @@ export default function Stage() {
 
   /* 키보드가 가리지 않게 (기획서 22.1) */
   const vh = useViewportHeight()
+
+  /* 실시간이 붙어 있나. 무료 등급은 **동시 Realtime 연결이 200개 선**이라
+     사람이 몰리면 여기서 먼저 막힙니다 (부록 E.8 · 5.14).
+
+     그때도 방은 열려 있습니다 — 입장·지난 대화·글 보내기는 전부 REST 라
+     한도에 안 걸립니다. 못 하는 건 **남의 새 글을 바로 받는 것** 하나뿐이라,
+     실시간이 안 붙으면 10초마다 가져오는 쪽으로 떨어집니다.
+     조용히 멈추면 「아무도 말을 안 하네」로 읽고 나갑니다 */
+  const [live, setLive] = useState(true)
+  const messagesRef = useRef<Msg[]>([])
+  const liveGuard = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [lang, setLang] = useLang()
   const t = dict(lang).room
 
@@ -251,37 +280,56 @@ export default function Stage() {
       if (cancelled) return
       setMessages((rows as unknown as Msg[]) ?? [])
 
-      channel = supabase
-        .channel('room:' + r.id + ':' + crypto.randomUUID())
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'messages', filter: 'room_id=eq.' + r.id },
-          async (payload) => {
-            const { data } = await supabase
-              .from('messages').select(SELECT).eq('id', payload.new.id).single()
-            if (!data) return
-            const incoming = data as unknown as Msg
-            setMessages((prev) => {
-              /* 내가 방금 낙관적으로 그려둔 그 문장이면 **진짜 행으로 갈아끼웁니다.**
-                 그냥 두면 화면은 맞게 보이지만 id 가 브라우저에서 만든 값 그대로라,
-                 그 id 로 첨삭을 넣는 순간 DB 에 없는 메시지라며 거절당합니다
-                 (corrections.message_id 가 messages 를 참조합니다) */
-              const i = prev.findIndex(
-                (m) => m.client_msg_id && m.client_msg_id === incoming.client_msg_id
-              )
-              if (i === -1) return [...prev, incoming]
-              const next = [...prev]
-              next[i] = incoming
-              return next
-            })
-          }
-        )
-        .subscribe()
+      /* ⚠️ 감시 타이머를 **먼저** 겁니다. 소켓을 못 열면 subscribe() 가 그 자리에서
+         예외를 던져서, 뒤에 두면 이 줄이 아예 실행되지 않습니다.
+
+         그리고 상태 콜백만 믿으면 안 됩니다 — 소켓이 안 열리면 콜백이 **아예 안 옵니다.**
+         supabase 가 조용히 재시도만 합니다. 그게 정확히 한도가 찼을 때의 모습이라
+         「연결됐다는 말이 안 들리면 안 된 것으로」 봅니다.
+         8초는 붙을 때 1초도 안 걸리는 것을 넉넉히 기다려 준 값입니다 */
+      liveGuard.current = setTimeout(() => { if (!cancelled) setLive(false) }, 8000)
+
+      /* 확인용 스위치. 주소에 ?nolive=1 을 붙이면 실시간을 아예 안 붙이고
+         가져오기로만 돕니다 — 한도가 찼을 때의 화면을 사람이 눈으로 볼 방법이
+         달리 없습니다. 실제로 한도에 걸린 상태를 만들어 볼 수는 없으니까요 */
+      if (/[?&]nolive=1/.test(window.location.search)) {
+        setLive(false)
+        return
+      }
+
+      try {
+        channel = supabase
+          .channel('room:' + r.id + ':' + crypto.randomUUID())
+          .on(
+            'postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'messages', filter: 'room_id=eq.' + r.id },
+            async (payload) => {
+              const { data } = await supabase
+                .from('messages').select(SELECT).eq('id', payload.new.id).single()
+              if (!data) return
+              setMessages((prev) => merge(prev, [data as unknown as Msg]))
+            }
+          )
+          .subscribe((status) => {
+            if (cancelled) return
+            if (status === 'SUBSCRIBED') {
+              if (liveGuard.current) clearTimeout(liveGuard.current)
+              setLive(true)
+            } else {
+              setLive(false)
+            }
+          })
+      } catch (e) {
+        /* 소켓을 아예 못 여는 경우. 방은 이미 열려 있으니 폴링으로 갑니다 */
+        console.error('실시간 연결 실패 — 가져오기로 바꿉니다:', e)
+        if (!cancelled) setLive(false)
+      }
     }
 
     join()
     return () => {
       cancelled = true
+      if (liveGuard.current) clearTimeout(liveGuard.current)
       if (channel) supabase.removeChannel(channel)
     }
   }, [slug, router, loadMembers])
@@ -303,6 +351,9 @@ export default function Stage() {
      옮겨간 층의 맨 아래에서 시작해야 합니다 (이때는 스르륵 없이 바로) */
   const shownLayer = useRef(layer)
 
+  /* 폴링이 「어디까지 받았나」를 알아야 합니다. 상태가 아니라 ref 라서 다시 그리지 않습니다 */
+  useEffect(() => { messagesRef.current = messages }, [messages])
+
   useEffect(() => {
     const layerChanged = shownLayer.current !== layer
     shownLayer.current = layer
@@ -313,6 +364,23 @@ export default function Stage() {
   /* 백스테이지를 보고 있는 동안에는 계속 「봤음」으로 저장해 둡니다.
      **저장소만 건드립니다** — 화면 상태는 탭을 떠날 때 한 번만 바꾸면 됩니다 (아래 탭 버튼).
      effect 가 할 일은 원래 이런 것(바깥 세계와 맞추기)입니다 */
+  /* 실시간이 끊긴 동안 10초마다 가져옵니다. REST 는 동시 연결 한도가 없어서
+     실시간이 막혀도 대화는 이어집니다 — 조금 늦게 뜰 뿐입니다.
+
+     마지막으로 받은 시각 뒤엣것만 가져옵니다. 통째로 다시 받으면 방이 길어질수록
+     10초마다 그만큼을 계속 내려받게 됩니다 */
+  useEffect(() => {
+    if (live || !room) return
+    const id = setInterval(async () => {
+      const last = messagesRef.current.reduce((a, m) => (m.created_at > a ? m.created_at : a), '')
+      let q = supabase.from('messages').select(SELECT).eq('room_id', room.id).order('created_at')
+      if (last) q = q.gt('created_at', last)
+      const { data } = await q
+      if (data?.length) setMessages((prev) => merge(prev, data as unknown as Msg[]))
+    }, 10000)
+    return () => clearInterval(id)
+  }, [live, room])
+
   useEffect(() => {
     if (layer !== 'backstage' || !room) return
     const all = readJson<Record<string, string>>(KEYS.seen, {})
@@ -503,6 +571,8 @@ export default function Stage() {
           <button onClick={unhideAll} style={linkBtn}>{t.unhide}</button>
         </div>
       )}
+      {/* 아무 말 없이 멈춘 것보다 낫습니다. 대화는 계속 되지만 조금 늦게 뜹니다 */}
+      {!live && <p style={slowStyle}>{t.slowLive}</p>}
       {note && <p style={noteStyle}>{note}</p>}
 
       {/* [새 메시지 ↓] 가 설 자리입니다. 스크롤되는 상자 **안**에 넣으면

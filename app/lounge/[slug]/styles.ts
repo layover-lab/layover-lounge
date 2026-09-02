@@ -204,3 +204,9 @@ export const starterChipStyle: CSSProperties = {
   border: '1px solid var(--color-primary)', background: 'var(--color-surface)',
   color: 'var(--color-text)', fontSize: 14, cursor: 'pointer', textAlign: 'left',
 }
+
+/* 실시간이 끊긴 동안 뜨는 줄. 경고가 아니라 안내라서 붉은색을 쓰지 않습니다 */
+export const slowStyle: CSSProperties = {
+  margin: 0, padding: '8px 16px', background: 'var(--backstage-tint)',
+  fontSize: 12.5, color: 'var(--color-text)',
+}
