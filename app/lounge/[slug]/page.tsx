@@ -13,6 +13,7 @@ import LangToggle from '@/components/LangToggle'
 import ReportSheet from '@/components/ReportSheet'
 import { LINE, dot, tab, ctaBtn, linkBtn } from '@/lib/ui'
 import { useAfterMount } from '@/lib/use-after-mount'
+import { useViewportHeight } from '@/lib/use-viewport-height'
 import { track } from '@/lib/analytics'
 type Member = { id: string; name: string; role: string | null; color_key: string }
 
@@ -52,6 +53,15 @@ export default function Stage() {
   const [layer, setLayer] = useState<Layer>('stage')
   const [text, setText] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  /* 「지금 맨 아래를 보고 있나」 — 상태가 아니라 ref 입니다.
+     스크롤할 때마다 다시 그리면 대화 중에 화면이 계속 깜빡입니다 */
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const atBottomRef = useRef(true)
+  const [hasNew, setHasNew] = useState(false)
+
+  /* 키보드가 가리지 않게 (기획서 22.1) */
+  const vh = useViewportHeight()
   const [lang, setLang] = useLang()
   const t = dict(lang).room
 
@@ -213,9 +223,29 @@ export default function Stage() {
     }
   }, [slug, router, loadMembers])
 
+  /* 맨 아래에 있을 때만 따라 내려갑니다. 위쪽 대화를 읽는 중에 새 글이 오면
+     화면을 뺏지 않고 [새 메시지 ↓] 만 띄웁니다 (기획서 5.12 ③)
+
+     ⚠️ 스르륵(`behavior: 'smooth'`)은 쓰지 않습니다. 새 글마다 화면이 미끄러지면
+        읽는 눈이 계속 따라다녀야 하고, 무엇보다 **중간에 끊기면 안 내려갑니다** —
+        다른 코드가 스크롤을 한 번만 건드려도 애니메이션이 취소됩니다.
+        조용히 실패하는 쪽이라 눈치채기도 어렵습니다 */
+  const toBottom = useCallback(() => {
+    bottomRef.current?.scrollIntoView()
+    atBottomRef.current = true
+    setHasNew(false)
+  }, [])
+
+  /* 탭을 옮겼을 때도 같이 처리합니다 — 두 층은 대화가 따로 흐르니
+     옮겨간 층의 맨 아래에서 시작해야 합니다 (이때는 스르륵 없이 바로) */
+  const shownLayer = useRef(layer)
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, layer])
+    const layerChanged = shownLayer.current !== layer
+    shownLayer.current = layer
+    if (layerChanged || atBottomRef.current) toBottom()
+    else setHasNew(true)
+  }, [messages, layer, toBottom])
 
   /* 백스테이지를 보고 있는 동안에는 계속 「봤음」으로 저장해 둡니다.
      **저장소만 건드립니다** — 화면 상태는 탭을 떠날 때 한 번만 바꾸면 됩니다 (아래 탭 버튼).
@@ -232,6 +262,8 @@ export default function Stage() {
     const clientMsgId = crypto.randomUUID()
     const me = loadMe()!
     if (raw === undefined) setText('')
+    /* 내가 보낸 것은 위를 읽던 중이라도 따라 내려갑니다 */
+    atBottomRef.current = true
 
     setMessages((prev) => [
       ...prev,
@@ -307,7 +339,13 @@ export default function Stage() {
   const roomSituation = field(room, 'situation', lang)
 
   return (
-    <main style={{ width: '100%', maxWidth: 480, margin: '0 auto', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+    <main style={{
+      width: '100%', maxWidth: 480, margin: '0 auto',
+      /* 아이폰에서 키보드가 올라오면 100dvh 는 그대로인데 보이는 화면만 줄어듭니다 —
+         입력창이 키보드 뒤로 숨습니다. 실제로 보이는 높이를 그대로 씁니다 */
+      height: vh ? `${vh}px` : '100dvh',
+      display: 'flex', flexDirection: 'column',
+    }}>
       <header style={{ background: '#FDE3EE', padding: '14px 16px' }}>
         {/* 오른쪽 위는 👥 가 쓰고 있어서 나가기 줄에 둡니다 */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -387,7 +425,20 @@ export default function Stage() {
       )}
       {reportNote && <p style={reportNoteStyle}>{reportNote}</p>}
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: 16, background: layer === 'backstage' ? BACKSTAGE_BG : 'var(--color-surface-sub)' }}>
+      {/* [새 메시지 ↓] 가 설 자리입니다. 스크롤되는 상자 **안**에 넣으면
+          버튼이 글을 따라 같이 올라가 버립니다 */}
+      <div style={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex' }}>
+      <div
+        ref={scrollRef}
+        onScroll={() => {
+          const el = scrollRef.current
+          if (!el) return
+          /* 딱 맞아떨어지는 일이 드물어서 몇 px 여유를 둡니다 */
+          atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60
+          if (atBottomRef.current) setHasNew(false)
+        }}
+        style={{ flex: 1, overflowY: 'auto', padding: 16, background: layer === 'backstage' ? BACKSTAGE_BG : 'var(--color-surface-sub)' }}
+      >
         {shown.length === 0 && layer === 'stage' && (
           <p style={{ color: 'var(--color-text-sub)', fontSize: 13, textAlign: 'center' }}>{t.empty}</p>
         )}
@@ -460,6 +511,11 @@ export default function Stage() {
           )
         })}
         <div ref={bottomRef} />
+      </div>
+
+        {hasNew && (
+          <button onClick={() => toBottom()} style={newMsgStyle}>{t.newMessages} ↓</button>
+        )}
       </div>
 
       {reportFor && room && (
@@ -598,6 +654,15 @@ const myBubbleStyle: CSSProperties = {
   ...bubbleStyle,
   background: 'var(--color-primary-tint)',
   border: '1px solid var(--color-primary)',
+}
+
+/* 위를 읽는 사람을 끌어내리지 않습니다 — 내려갈지는 본인이 정합니다 (기획서 5.12 ③) */
+const newMsgStyle: CSSProperties = {
+  position: 'absolute', left: '50%', bottom: 12, transform: 'translateX(-50%)',
+  padding: '8px 16px', borderRadius: 'var(--radius-full)',
+  border: '1px solid var(--color-primary)', background: 'var(--color-surface)',
+  color: 'var(--color-text)', fontSize: 13, fontWeight: 600,
+  boxShadow: '0 2px 8px rgba(43, 34, 38, .12)', cursor: 'pointer', whiteSpace: 'nowrap',
 }
 
 const sendStyle: CSSProperties = {
