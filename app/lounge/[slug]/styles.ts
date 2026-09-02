@@ -189,3 +189,18 @@ export const sendStyle: CSSProperties = {
   padding: '0 18px', borderRadius: 'var(--radius-full)', border: 'none',
   background: 'var(--color-primary)', fontWeight: 600, cursor: 'pointer',
 }
+
+/* 빈 무대의 첫 대사 칩. 말풍선처럼 보이면 남이 한 말로 읽히니
+   테두리만 있는 알약으로 둡니다 — 「눌러서 내가 말하는 것」이라야 합니다 */
+export const starterWrapStyle: CSSProperties = {
+  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+  padding: '24px 8px',
+}
+export const starterLeadStyle: CSSProperties = {
+  margin: '0 0 4px', fontSize: 12.5, color: 'var(--color-text-sub)',
+}
+export const starterChipStyle: CSSProperties = {
+  maxWidth: '100%', padding: '10px 16px', borderRadius: 'var(--radius-full)',
+  border: '1px solid var(--color-primary)', background: 'var(--color-surface)',
+  color: 'var(--color-text)', fontSize: 14, cursor: 'pointer', textAlign: 'left',
+}

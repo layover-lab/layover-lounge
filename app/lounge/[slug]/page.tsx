@@ -17,6 +17,9 @@ import { dot, tab, ctaBtn, linkBtn } from '@/lib/ui'
 import { useViewportHeight } from '@/lib/use-viewport-height'
 import { track } from '@/lib/analytics'
 import {
+  starterWrapStyle,
+  starterLeadStyle,
+  starterChipStyle,
   BACKSTAGE_BG,
   askLineStyle,
   askMineStyle,
@@ -59,7 +62,7 @@ type Msg = {
 const SELECT = 'id, layer, kind, body, client_msg_id, created_at, participant_id, participants(name, color_key, role)'
 
 type Room = {
-  id: string; gate_no: number | null; capacity: number | null
+  id: string; gate_no: number | null; capacity: number | null; situation_key: string | null
   title: string; title_ja: string | null; title_en: string | null
   situation: string | null; situation_ja: string | null; situation_en: string | null
 }
@@ -210,7 +213,7 @@ export default function Stage() {
 
       const { data: r, error: roomError } = await supabase
         .from('rooms')
-        .select('id, gate_no, capacity, title, title_ja, title_en, situation, situation_ja, situation_en')
+        .select('id, gate_no, capacity, situation_key, title, title_ja, title_en, situation, situation_ja, situation_en')
         .eq('slug', slug).single()
       if (roomError || !r) {
         /* 없는 주소·네트워크 끊김. 여기서 안 잡으면 「…」 화면에 갇힙니다 */
@@ -402,6 +405,11 @@ export default function Stage() {
         (!seenAt || m.created_at > seenAt)
     )
 
+  /* 방 슬러그가 아니라 **상황**으로 찾습니다. 같은 상황의 2번 게이트에도 같은 칩이 떠야 합니다.
+     situation_key 는 `showtime` 처럼 오는데 방 슬러그는 `showtime-1` 입니다 */
+  const starterMap = dict(lang).starters as Record<string, string[]>
+  const starters = starterMap[(room.situation_key ?? '').replace(/-\d+$/, '')] ?? []
+
   const roomTitle = field(room, 'title', lang)
   const roomSituation = field(room, 'situation', lang)
 
@@ -511,8 +519,26 @@ export default function Stage() {
         }}
         style={{ flex: 1, overflowY: 'auto', padding: 16, background: layer === 'backstage' ? BACKSTAGE_BG : 'var(--color-surface-sub)' }}
       >
+        {/* 빈 방의 어색함을 없애는 장치입니다 (기획서 5.7 · 22.1).
+            「무슨 말을 하지?」가 남아 있으면 들어와도 그냥 나갑니다.
+
+            ⚠️ 상황마다 다른 말이어야 합니다. 「안녕하세요」 같은 공용 문구를 띄우면
+               상황이 있는 방(3.6)의 값이 사라집니다.
+            ⚠️ 운영자가 상황을 새로 열면 그 방에는 칩이 없습니다. 그때는 예전처럼
+               안내 한 줄만 뜹니다 — 없는 채로 두는 게 엉뚱한 말을 띄우는 것보다 낫습니다 */}
         {shown.length === 0 && layer === 'stage' && (
-          <p style={{ color: 'var(--color-text-sub)', fontSize: 13, textAlign: 'center' }}>{t.empty}</p>
+          starters.length > 0 ? (
+            <div style={starterWrapStyle}>
+              <p style={starterLeadStyle}>{t.starterLead}</p>
+              {starters.map((line) => (
+                <button key={line} onClick={() => send(line)} style={starterChipStyle}>
+                  {line}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p style={{ color: 'var(--color-text-sub)', fontSize: 13, textAlign: 'center' }}>{t.empty}</p>
+          )
         )}
 
         {shown.length === 0 && layer === 'backstage' && (

@@ -71,7 +71,8 @@
     "r_banned_image": "Banned image",
     "r_spam": "Spam",
     "r_scam": "Scam or payment bait",
-    "r_other": "Something else"
+    "r_other": "Something else",
+    "starterLead": "Want to start like this?"
   },
   "colors": {
     "yellow": "Yellow",
@@ -139,5 +140,32 @@
     "wishNotice": "If enough people ask for it, we'll try to make it",
     "wishTooFast": "One moment — you can send another in a bit",
     "wishFailed": "Something went wrong. Please try again in a moment"
+  },
+  "starters": {
+    "japan-trip": [
+      "I really want to go to Harajuku today",
+      "Is everyone packed?",
+      "Let's hit the convenience store first"
+    ],
+    "merch-shop": [
+      "Look at this, it's so my style",
+      "I can't decide if I should buy this",
+      "What's everyone getting?"
+    ],
+    "new-member": [
+      "Hi, nice to meet you all",
+      "I'm joining you from today",
+      "Can I get your names first?"
+    ],
+    "pajama-party": [
+      "I'm hungry, what should we order?",
+      "Nobody's sleeping yet?",
+      "Let's turn off the lights and talk"
+    ],
+    "showtime": [
+      "My heart is about to explode",
+      "Everyone ready?",
+      "Hands in"
+    ]
   }
 }
