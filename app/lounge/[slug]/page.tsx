@@ -7,7 +7,7 @@ import { dict, field } from '@/lib/i18n'
 import { useLang } from '@/lib/use-lang'
 import { useHidden } from '@/lib/use-hidden'
 import { loadMe } from '@/lib/me'
-import { KEYS, readJson, writeJson } from '@/lib/storage'
+import { KEYS, readJson, writeJson, writeText } from '@/lib/storage'
 import { ERR, isErr } from '@/lib/errors'
 import LangToggle from '@/components/LangToggle'
 import ReportSheet from '@/components/ReportSheet'
@@ -258,6 +258,9 @@ export default function Stage() {
       if (cancelled) return
       setRoom(r)
       setSeenAt(readJson<Record<string, string>>(KEYS.seen, {})[r.id] ?? null)
+      /* 나중에 입장 화면에서 건의할 때 「어디서 겪은 불편인가」로 실립니다.
+         입장 화면이 아니라 여기서 씁니다 — 링크로 바로 들어온 사람도 잡혀야 합니다 */
+      writeText(KEYS.lastRoom, slug)
 
       /* 브라우저는 participants 를 직접 쓰지 않습니다 — client_id 가 오가면 사칭이 됩니다.
          등록·갱신은 서버 함수 하나로 (20260831140000_join_room_rpc.sql) */

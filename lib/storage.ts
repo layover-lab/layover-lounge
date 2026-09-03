@@ -15,6 +15,7 @@ export const KEYS = {
   hidden: 'layover.hidden',  // 숨긴 사람 (lib/use-hidden.ts)
   from: 'layover.from',      // 어느 테스트에서 왔나
   seen: 'layover.seen',      // 방별 백스테이지 마지막 확인 시각
+  lastRoom: 'layover.lastRoom', // 마지막에 들어간 방 (건의에 맥락으로 실립니다)
   client: 'layover.clientId', // 익명 식별자 (lib/client-id.ts). **바꾸면 모두의 참가 이력이 끊깁니다**
 } as const
 

@@ -140,7 +140,7 @@
     "wishPlaceholder": "What would you like to see?",
     "wishSend": "Send",
     "wishDone": "Thank you! We've got it 🌷",
-    "wishNotice": "If enough people ask for it, we'll try to make it",
+    "wishNotice": "Thank you for your feedback 🙏",
     "wishTooFast": "One moment — you can send another in a bit",
     "wishFailed": "Something went wrong. Please try again in a moment"
   },
@@ -170,5 +170,14 @@
       "Everyone ready?",
       "Hands in"
     ]
+  },
+  "feedback": {
+    "wishTitle": "Something to improve",
+    "wishPlaceholder": "What felt awkward to use?",
+    "wishSend": "Send",
+    "wishDone": "Thank you so much! We will act on your feedback 🌷",
+    "wishNotice": "We'll read it and fix things one by one 🌷",
+    "wishTooFast": "Just a moment, you can send again shortly",
+    "wishFailed": "Something went wrong. Please try again in a moment"
   }
 }

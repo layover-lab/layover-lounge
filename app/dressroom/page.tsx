@@ -5,14 +5,12 @@ import {
   BASE_LAYERS, CATEGORIES, ITEMS, ITEM_IMAGE_DIR, ITEM_IMAGE_EXT,
   type Category, type Item,
 } from './items'
-import { supabase } from '@/lib/supabase'
-import { getClientId } from '@/lib/client-id'
 import { dict, type Mode } from '@/lib/i18n'
 import { useLang } from '@/lib/use-lang'
 import { track } from '@/lib/analytics'
-import { ERR, isErr } from '@/lib/errors'
 import LangToggle from '@/components/LangToggle'
 import RoomNav from '@/components/RoomNav'
+import WishBox from '@/components/WishBox'
 import { LINE, wrap, ctaBtn, ctaGhost, dot, tab } from '@/lib/ui'
 
 /* ─────────────────────────────────────────────────────────
@@ -64,9 +62,6 @@ export default function DressroomPage() {
   /* 「이런 옷도 입고 싶어요」 (기획서 8.2 · 9장).
      행동으로 수요를 추정하는 것과 별개로, 사람이 직접 말해주는 신호를 받습니다.
      남의 건의는 안 보여줍니다 — 공개하면 모더레이션이 또 하나 생깁니다 */
-  const [wish, setWish] = useState('')
-  const [wishNote, setWishNote] = useState('')
-  const [wishBusy, setWishBusy] = useState(false)
 
   /* 첫 진입에 한 번. useLang 이 언어를 정한 직후 불립니다 (lib/use-lang.ts) */
   function onFirstOpen(picked: Mode) {
@@ -124,27 +119,6 @@ export default function DressroomPage() {
     }
     apply(next)
     track('look_random', { lang })
-  }
-
-  const sendWish = async () => {
-    const body = wish.trim()
-    if (!body || wishBusy) return
-    setWishBusy(true)
-    const { error } = await supabase.from('wishes').insert({
-      client_id: getClientId(),
-      body,
-      look: toLook(worn),        /* 무슨 옷을 보다가 이런 생각을 했나 — 그게 맥락입니다 */
-      lang,
-    })
-    setWishBusy(false)
-    if (error) {
-      /* 도배 방지에 걸린 것. 쓴 걸 지우지 않습니다 */
-      setWishNote(isErr(error, ERR.wishTooFast, ERR.wishTooMany) ? t.wishTooFast : t.wishFailed)
-      return
-    }
-    setWish('')
-    setWishNote(t.wishDone)
-    track('wish_submitted', { lang })
   }
 
   const share = async () => {
@@ -257,27 +231,7 @@ export default function DressroomPage() {
       </button>
 
       {/* 맨 아래에 둡니다 — 입혀보는 걸 방해하지 않고, 다 본 뒤에 눈에 들어옵니다 */}
-      <section style={wishBoxStyle}>
-        <b style={{ fontSize: 14 }}>{t.wishTitle}</b>
-        <div style={{ display: 'flex', gap: 8, margin: '10px 0 8px' }}>
-          <input
-            value={wish}
-            onChange={(e) => setWish(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) sendWish() }}
-            placeholder={t.wishPlaceholder}
-            maxLength={300}
-            style={wishInputStyle}
-          />
-          <button onClick={sendWish} disabled={!wish.trim() || wishBusy}
-                  style={{ ...ctaBtn, fontSize: 14, padding: '11px 16px', opacity: wish.trim() ? 1 : 0.5 }}>
-            {t.wishSend}
-          </button>
-        </div>
-        {/* 옷 이야기라 위험은 낮지만 자유 입력입니다 (기획서 3.5) */}
-        <p style={{ margin: 0, fontSize: 11.5, color: 'var(--color-text-sub)' }}>
-          {wishNote || t.wishNotice}
-        </p>
-      </section>
+      <WishBox t={t} lang={lang} kind="clothes" look={toLook(worn)} />
 
       <RoomNav lang={lang} here="dressroom" />
     </main>
@@ -300,15 +254,6 @@ const grid: CSSProperties = {
 const thumb: CSSProperties = {
   width: '100%', aspectRatio: '1', objectFit: 'contain', background: 'var(--color-surface-sub)',
   borderRadius: 10, marginBottom: 6,
-}
-const wishBoxStyle: CSSProperties = {
-  marginTop: 24, padding: 16, borderRadius: 'var(--radius-card)',
-  background: 'var(--color-surface)', border: `1px solid ${LINE}`,
-}
-const wishInputStyle: CSSProperties = {
-  flex: 1, minWidth: 0, padding: 11, fontSize: 14,
-  borderRadius: 'var(--radius-full)', border: `1px solid ${LINE}`,
-  background: 'var(--color-bg)',
 }
 
 /* 주 언어보다 작고 흐리게 — 읽고 싶은 사람만 읽으면 됩니다 */

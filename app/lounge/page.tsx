@@ -8,9 +8,10 @@ import { getClientId } from '@/lib/client-id'
 import { dict, field } from '@/lib/i18n'
 import { useLang } from '@/lib/use-lang'
 import { loadMe, patchMe } from '@/lib/me'
-import { KEYS, writeText } from '@/lib/storage'
+import { KEYS, readText, writeText } from '@/lib/storage'
 import LangToggle from '@/components/LangToggle'
 import RoomNav from '@/components/RoomNav'
+import WishBox from '@/components/WishBox'
 import { LINE } from '@/lib/ui'
 import { useAfterMount } from '@/lib/use-after-mount'
 
@@ -44,6 +45,10 @@ export default function LoungeEntry() {
   /* 뭘 안 채웠는지. 문구를 담지 않고 **어느 칸인지**를 담습니다 —
      안내를 그 칸 바로 아래에 띄우려면 어느 칸인지 알아야 합니다 */
   const [missing, setMissing] = useState<'color' | 'name' | null>(null)
+
+  /* 마지막에 들어갔던 방. 건의에 같이 실어 보냅니다 —
+     드레스룸이 「입고 있던 코디」를 같이 보내는 것과 같은 이유입니다 */
+  const [lastRoom, setLastRoom] = useState<string | null>(null)
   const colorRef = useRef<HTMLDivElement>(null)
   const nameRef = useRef<HTMLInputElement>(null)
   const [lang, setLang] = useLang()
@@ -51,6 +56,7 @@ export default function LoungeEntry() {
   const colorNames = dict(lang).colors as Record<string, string>
 
   useAfterMount(() => {
+    setLastRoom(readText(KEYS.lastRoom))
     const me = loadMe()
     if (me) {
       setColorKey((me.colorKey as ColorKey) ?? null)
@@ -233,6 +239,19 @@ export default function LoungeEntry() {
           )
         })}
       </div>
+
+      {/* 맨 아래에 둡니다 — 드레스룸과 같은 자리입니다. 그리고 「나가기」가
+          이 화면으로 보내니, 놀다 나온 직후에 눈에 들어옵니다.
+
+          ⚠️ 방 안(무대·백스테이지)에는 넣지 않습니다. 롤플레이 화면에 개선 요청
+             칸이 있으면 놀이 화면이 피드백 폼이 되고, 백스테이지는 **같이 노는
+             사람에게** 하는 말이라 운영자에게 하는 말과 섞이면 안 됩니다 */}
+      <WishBox
+        t={dict(lang).feedback}
+        lang={lang}
+        kind="lounge"
+        room={lastRoom}
+      />
 
       <RoomNav lang={lang} here="lounge" />
     </main>

@@ -140,7 +140,7 @@
     "wishPlaceholder": "어떤 옷이 있으면 좋겠어요?",
     "wishSend": "보내기",
     "wishDone": "고마워요! 잘 봤어요 🌷",
-    "wishNotice": "많은 분들이 원하신다면 반영해볼게요",
+    "wishNotice": "소중한 피드백 감사합니다 🙏",
     "wishTooFast": "잠깐만요, 조금 뒤에 다시 보낼 수 있어요",
     "wishFailed": "문제가 생겼어요. 잠시 뒤에 다시 해주세요"
   },
@@ -170,5 +170,14 @@
       "다들 준비됐지?",
       "손 모으자"
     ]
+  },
+  "feedback": {
+    "wishTitle": "개선이 필요해요",
+    "wishPlaceholder": "어떤 점이 불편하셨나요?",
+    "wishSend": "보내기",
+    "wishDone": "정말 감사합니다! 피드백 반영하겠습니다 🌷",
+    "wishNotice": "읽고 하나씩 고쳐볼게요 🌷",
+    "wishTooFast": "잠깐만요, 조금 뒤에 다시 보낼 수 있어요",
+    "wishFailed": "문제가 생겼어요. 잠시 뒤에 다시 해주세요"
   }
 }
