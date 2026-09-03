@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { dict } from '@/lib/i18n'
-import { tplCardStyle, tplSendStyle, askCancelStyle, twoWayStyle, twoWayTermStyle, twoWayDescStyle } from './styles'
+import { tplCardStyle, tplSendStyle, askCancelStyle, twoWayStyle, twoWayTermStyle, twoWayDescStyle, bsNoteStyle } from './styles'
 
 type Room = ReturnType<typeof dict>['room']
 
@@ -61,6 +61,11 @@ export default function BackstageIntro({ t, onSend }: { t: Room; onSend: (body: 
         <li>· {t.bsUse2}</li>
         <li>· {t.bsUse3}</li>
       </ul>
+
+      {/* 만든 사람이 하는 말입니다. 제품 설명과 **다르게 보여야** 합니다 —
+          목록은 「언제 쓰나」이고 이건 「누가 왜 만들었나」라 성격이 다릅니다.
+          그리고 이 한 줄이 「서로 봐준다」의 상대가 누구인지를 답합니다 */}
+      <p style={bsNoteStyle}>{t.bsNote}</p>
 
       <button onClick={() => setShowTpl(true)} style={tplSendStyle}>{t.bsPlan}</button>
     </div>

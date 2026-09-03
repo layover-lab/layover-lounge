@@ -210,3 +210,10 @@ export const slowStyle: CSSProperties = {
   margin: 0, padding: '8px 16px', background: 'var(--backstage-tint)',
   fontSize: 12.5, color: 'var(--color-text)',
 }
+
+/* 만든 사람이 하는 말. 제품 문구와 섞이면 안 돼서 옅은 바탕에 담아 둡니다 */
+export const bsNoteStyle: CSSProperties = {
+  margin: '0 0 14px', padding: '10px 12px',
+  background: 'var(--color-surface-sub)', borderRadius: 10,
+  fontSize: 12.5, lineHeight: 1.7, color: 'var(--color-text)', textAlign: 'left',
+}
